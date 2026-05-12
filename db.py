@@ -1,121 +1,195 @@
-"""SwingEdge Pro — Database Manager v4 (with ML state tables)"""
-import sqlite3, os, json
+"""SwingEdge Pro — Firestore Database Manager (replaces SQLite)"""
+import os, json
 from datetime import datetime, timedelta
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'predictions.db')
+import firebase_admin
+from firebase_admin import credentials, firestore as fs
 
-def get_conn():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+
+# ── Init ───────────────────────────────────────────────────────────────────────
+
+def _get_db():
+    """Return Firestore client, initialising the Firebase app if needed."""
+    if not firebase_admin._apps:
+        cred_json = os.environ.get('FIREBASE_CREDENTIALS', '')
+        if not cred_json:
+            raise RuntimeError(
+                "FIREBASE_CREDENTIALS env var is not set. "
+                "Paste your Firebase service-account JSON as a single-line string."
+            )
+        cred_dict = json.loads(cred_json)
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred)
+    return fs.client()
+
 
 def init_db():
-    conn = get_conn(); c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS predictions (
-        id               INTEGER PRIMARY KEY AUTOINCREMENT,
-        logged_date      TEXT NOT NULL, symbol TEXT NOT NULL,
-        trade_type       TEXT NOT NULL, entry_price REAL NOT NULL,
-        entry_trigger    REAL NOT NULL, target1 REAL NOT NULL,
-        target2          REAL NOT NULL, target3 REAL, stop_loss REAL NOT NULL,
-        score            REAL NOT NULL, atr REAL NOT NULL,
-        rsi_at_entry     REAL, macd_at_entry REAL, vol_at_entry REAL,
-        adx_at_entry     REAL, ema_align_at_entry REAL,
-        vwap_above_at_entry INTEGER, bb_b_at_entry REAL, ret20_at_entry REAL,
-        status           TEXT DEFAULT 'OPEN', outcome_price REAL,
-        outcome_date     TEXT, profit_loss_pct REAL, investment_100k REAL,
-        win_prob_at_entry REAL,
-        created_at       TEXT DEFAULT CURRENT_TIMESTAMP
-    )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS self_notes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        icon TEXT, type TEXT, note TEXT, created_at TEXT
-    )''')
-    conn.commit(); conn.close()
+    """No-op — Firestore creates collections on first write."""
+    pass
+
+
+# ── Predictions ────────────────────────────────────────────────────────────────
 
 def log_predictions(picks):
-    conn = get_conn(); c = conn.cursor()
-    today = datetime.now().strftime('%Y-%m-%d'); logged = 0
+    db = _get_db()
+    today = datetime.now().strftime('%Y-%m-%d')
+    logged = 0
+    col = db.collection('predictions')
+
     for p in picks:
-        exists = c.execute(
-            'SELECT id FROM predictions WHERE logged_date=? AND symbol=? AND trade_type=?',
-            (today, p['symbol'], p['trade_type'])).fetchone()
-        if not exists:
-            c.execute('''INSERT INTO predictions
-                (logged_date,symbol,trade_type,entry_price,entry_trigger,target1,target2,target3,
-                 stop_loss,score,atr,rsi_at_entry,macd_at_entry,vol_at_entry,adx_at_entry,
-                 ema_align_at_entry,vwap_above_at_entry,bb_b_at_entry,ret20_at_entry,win_prob_at_entry)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                (today,p['symbol'],p['trade_type'],p['entry_price'],p['entry_trigger'],
-                 p['target1'],p['target2'],p.get('target3'),p['stop_loss'],p['score'],p['atr'],
-                 p.get('rsi'),p.get('macd_hist'),p.get('vol_ratio'),p.get('adx'),
-                 p.get('ema_align'),p.get('vwap_above'),p.get('bb_b'),p.get('ret20'),
-                 p.get('win_prob')))
-            logged += 1
-    conn.commit(); conn.close(); return logged
+        # Deduplicate: one prediction per symbol+type per day
+        existing = (
+            col.where('logged_date', '==', today)
+               .where('symbol',      '==', p['symbol'])
+               .where('trade_type',  '==', p['trade_type'])
+               .limit(1).get()
+        )
+        if list(existing):
+            continue
+
+        col.add({
+            'logged_date':          today,
+            'symbol':               p['symbol'],
+            'trade_type':           p['trade_type'],
+            'entry_price':          p['entry_price'],
+            'entry_trigger':        p['entry_trigger'],
+            'target1':              p['target1'],
+            'target2':              p['target2'],
+            'target3':              p.get('target3'),
+            'stop_loss':            p['stop_loss'],
+            'score':                p['score'],
+            'atr':                  p['atr'],
+            'rsi_at_entry':         p.get('rsi'),
+            'macd_at_entry':        p.get('macd_hist'),
+            'vol_at_entry':         p.get('vol_ratio'),
+            'adx_at_entry':         p.get('adx'),
+            'ema_align_at_entry':   p.get('ema_align'),
+            'vwap_above_at_entry':  p.get('vwap_above'),
+            'bb_b_at_entry':        p.get('bb_b'),
+            'ret20_at_entry':       p.get('ret20'),
+            'win_prob_at_entry':    p.get('win_prob'),
+            'status':               'OPEN',
+            'outcome_price':        None,
+            'outcome_date':         None,
+            'profit_loss_pct':      None,
+            'investment_100k':      None,
+            'created_at':           datetime.now().isoformat(),
+        })
+        logged += 1
+
+    return logged
+
 
 def update_open_predictions(current_prices):
-    conn = get_conn(); c = conn.cursor()
+    db = _get_db()
     today = datetime.now().strftime('%Y-%m-%d')
-    rows = c.execute("SELECT * FROM predictions WHERE status='OPEN'").fetchall()
+    swing_cutoff  = (datetime.now() - timedelta(days=20)).strftime('%Y-%m-%d')
+    open_docs = db.collection('predictions').where('status', '==', 'OPEN').get()
     updated = 0
-    for row in rows:
-        sym = row['symbol']
-        if sym not in current_prices: continue
-        price = current_prices[sym]
-        entry = row['entry_price']; t1 = row['target1']; t2 = row['target2']; sl = row['stop_loss']
+
+    for doc in open_docs:
+        row   = doc.to_dict()
+        sym   = row['symbol']
+        price = current_prices.get(sym)
+
+        if price is None:
+            continue
+
+        entry = row['entry_price']
+        t1    = row['target1']
+        t2    = row['target2']
+        sl    = row['stop_loss']
+        tt    = row.get('trade_type', 'SWING')
+        ld    = row.get('logged_date', today)
+
+        # Check if expired
+        if tt == 'INTRADAY' and ld < today:
+            doc.reference.update({'status': 'EXPIRED'})
+            continue
+        if tt == 'SWING' and ld < swing_cutoff:
+            doc.reference.update({'status': 'EXPIRED'})
+            continue
+
+        # Check outcome
         status = None
-        if price >= t2:   status = 'WIN_T2'
+        if   price >= t2: status = 'WIN_T2'
         elif price >= t1: status = 'WIN_T1'
         elif price <= sl: status = 'LOSS'
+
         if status:
             pnl = round((price - entry) / entry * 100, 2)
             inv = round(100000 + 100000 * pnl / 100, 2)
-            c.execute('''UPDATE predictions SET status=?,outcome_price=?,outcome_date=?,
-                         profit_loss_pct=?,investment_100k=? WHERE id=?''',
-                      (status, price, today, pnl, inv, row['id']))
+            doc.reference.update({
+                'status':          status,
+                'outcome_price':   price,
+                'outcome_date':    today,
+                'profit_loss_pct': pnl,
+                'investment_100k': inv,
+            })
             updated += 1
-    cutoff_intra = today
-    cutoff_swing = (datetime.now() - timedelta(days=20)).strftime('%Y-%m-%d')
-    c.execute("UPDATE predictions SET status='EXPIRED' WHERE status='OPEN' AND trade_type='INTRADAY' AND logged_date < ?", (cutoff_intra,))
-    c.execute("UPDATE predictions SET status='EXPIRED' WHERE status='OPEN' AND trade_type='SWING' AND logged_date < ?", (cutoff_swing,))
-    conn.commit(); conn.close(); return updated
+
+    return updated
+
 
 def get_all_predictions():
-    conn = get_conn()
-    rows = conn.execute("SELECT * FROM predictions ORDER BY created_at DESC").fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    db = _get_db()
+    docs = (
+        db.collection('predictions')
+          .order_by('created_at', direction=fs.Query.DESCENDING)
+          .get()
+    )
+    return [{'id': doc.id, **doc.to_dict()} for doc in docs]
+
+
+# ── Self Notes ─────────────────────────────────────────────────────────────────
 
 def save_self_notes(notes):
-    conn = get_conn(); c = conn.cursor()
-    c.execute("DELETE FROM self_notes")
+    db = _get_db()
+    col = db.collection('self_notes')
+    # Wipe previous notes
+    for doc in col.get():
+        doc.reference.delete()
     for n in notes:
-        c.execute("INSERT INTO self_notes(icon,type,note,created_at) VALUES(?,?,?,?)",
-                  (n.get('icon','📌'), n.get('type','info'), n.get('note',''), n.get('updated','')))
-    conn.commit(); conn.close()
+        col.add({
+            'icon':       n.get('icon', '📌'),
+            'type':       n.get('type', 'info'),
+            'note':       n.get('note', ''),
+            'created_at': n.get('updated', datetime.now().isoformat()),
+        })
+
+
+# ── Audit ──────────────────────────────────────────────────────────────────────
 
 def get_audit_summary():
-    preds = get_all_predictions()
-    conn = get_conn()
-    notes = [dict(r) for r in conn.execute("SELECT * FROM self_notes ORDER BY id DESC").fetchall()]
-    conn.close()
+    db     = _get_db()
+    preds  = get_all_predictions()
+    notes  = [
+        {'id': d.id, **d.to_dict()}
+        for d in db.collection('self_notes')
+                   .order_by('created_at', direction=fs.Query.DESCENDING)
+                   .get()
+    ]
     stats = {}
-    for tt in ['SWING','INTRADAY']:
-        sub    = [p for p in preds if p['trade_type']==tt]
-        closed = [p for p in sub if p['status'] in ('WIN_T1','WIN_T2','LOSS')]
-        wins   = [p for p in closed if p['status'].startswith('WIN')]
-        losses = [p for p in closed if p['status']=='LOSS']
-        accuracy = round(len(wins)/len(closed)*100,1) if closed else 0
-        avg_win  = round(sum(p.get('profit_loss_pct',0) or 0 for p in wins)/len(wins),2) if wins else 0
-        avg_loss = round(sum(p.get('profit_loss_pct',0) or 0 for p in losses)/len(losses),2) if losses else 0
-        inv_total = sum(p.get('investment_100k',100000) or 100000 for p in closed)
-        net_roi = round((inv_total/(len(closed)*100000)-1)*100,2) if closed else 0
+    for tt in ['SWING', 'INTRADAY']:
+        sub    = [p for p in preds if p.get('trade_type') == tt]
+        closed = [p for p in sub   if p.get('status') in ('WIN_T1', 'WIN_T2', 'LOSS')]
+        wins   = [p for p in closed if p.get('status', '').startswith('WIN')]
+        losses = [p for p in closed if p.get('status') == 'LOSS']
+        accuracy  = round(len(wins)   / len(closed) * 100, 1) if closed else 0
+        avg_win   = round(sum(p.get('profit_loss_pct', 0) or 0 for p in wins)   / len(wins),   2) if wins   else 0
+        avg_loss  = round(sum(p.get('profit_loss_pct', 0) or 0 for p in losses) / len(losses), 2) if losses else 0
+        inv_total = sum(p.get('investment_100k', 100000) or 100000 for p in closed)
+        net_roi   = round((inv_total / (len(closed) * 100000) - 1) * 100, 2) if closed else 0
         stats[tt] = {
-            'total':len(sub),'open':len([p for p in sub if p['status']=='OPEN']),
-            'closed':len(closed),'wins':len(wins),'losses':len(losses),
-            'expired':len([p for p in sub if p['status']=='EXPIRED']),
-            'accuracy_pct':accuracy,'avg_win_pct':avg_win,'avg_loss_pct':avg_loss,
-            'net_roi_pct':net_roi
+            'total':        len(sub),
+            'open':         len([p for p in sub if p.get('status') == 'OPEN']),
+            'closed':       len(closed),
+            'wins':         len(wins),
+            'losses':       len(losses),
+            'expired':      len([p for p in sub if p.get('status') == 'EXPIRED']),
+            'accuracy_pct': accuracy,
+            'avg_win_pct':  avg_win,
+            'avg_loss_pct': avg_loss,
+            'net_roi_pct':  net_roi,
         }
-    return {'predictions':preds,'stats':stats,'self_notes':notes}
+    return {'predictions': preds, 'stats': stats, 'self_notes': notes}

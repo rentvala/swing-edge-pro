@@ -9,7 +9,8 @@ import ml as ML_MOD
 import social as SOCIAL
 
 warnings.filterwarnings('ignore')
-app = Flask(__name__)
+import os as _os
+app = Flask(__name__, template_folder=_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "templates"))
 app.secret_key = 'swingEdgePro2025v5'
 DB.init_db()
 ML = ML_MOD.ML
