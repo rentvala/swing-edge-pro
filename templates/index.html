@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SwingEdge Pro v5</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+/* ── THEMES ─────────────────────────────────────────────── */
+:root {
+  --bg:#f4f6fb;--bg2:#fff;--card:#fff;--card2:#f0f3fa;--border:#dde3f0;
+  --text:#1a202c;--muted:#6b7280;--sub:#374151;--accent:#2563eb;--acc2:#7c3aed;
+  --asoft:rgba(37,99,235,.1);--green:#16a34a;--red:#dc2626;--yellow:#d97706;
+  --shadow:0 2px 14px rgba(0,0,0,.07);--r:12px;--font:'Segoe UI',system-ui,sans-serif;
+  --hbg:#fff;--thead:#f8fafc;
+}
+[data-theme="dark"]{
+  --bg:#0d0f14;--bg2:#151820;--card:#151820;--card2:#1c2030;--border:#2a2f3e;
+  --text:#e2e8f0;--muted:#64748b;--sub:#94a3b8;--accent:#00d4ff;--acc2:#a78bfa;
+  --asoft:rgba(0,212,255,.1);--green:#00e676;--red:#ff4444;--yellow:#ffd600;
+  --shadow:0 2px 14px rgba(0,0,0,.4);--hbg:#151820;--thead:#1c2030;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;transition:background .3s,color .3s}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+header{background:var(--hbg);border-bottom:1px solid var(--border);padding:11px 26px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:300;box-shadow:var(--shadow)}
+.logo{display:flex;align-items:center;gap:10px}
+.li{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--acc2));
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;color:#fff}
+.ln{font-size:1.15rem;font-weight:800;
+  background:linear-gradient(90deg,var(--accent),var(--acc2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ls{font-size:.65rem;color:var(--muted)}
+.hr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rtimer{display:flex;align-items:center;gap:5px;font-size:.73rem;color:var(--muted);
+  background:var(--card2);padding:4px 10px;border-radius:20px;border:1px solid var(--border)}
+.rdot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.mstatus{font-size:.72rem;padding:3px 9px;border-radius:10px;font-weight:700}
+.ms-open{background:rgba(22,163,74,.12);color:var(--green)}
+.ms-closed{background:rgba(220,38,38,.1);color:var(--red)}
+.ms-pre{background:rgba(217,119,6,.1);color:var(--yellow)}
+.btn{padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:.78rem;transition:all .2s}
+.bp{background:linear-gradient(135deg,var(--accent),var(--acc2));color:#fff}
+.bp:hover{opacity:.85} .bp:disabled{opacity:.5;cursor:not-allowed}
+.bo{background:transparent;border:1px solid var(--border);color:var(--text)}
+.bo:hover{background:var(--card2)}
+.ttog{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--card2);
+  cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+
+/* ── TABS ───────────────────────────────────────────────── */
+.tabwrap{background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 26px;position:sticky;top:60px;z-index:200;overflow-x:auto}
+.tabs{display:flex;min-width:max-content}
+.tb{padding:11px 18px;border:none;background:transparent;color:var(--muted);
+  cursor:pointer;font-weight:600;font-size:.8rem;border-bottom:3px solid transparent;
+  white-space:nowrap;transition:all .2s}
+.tb:hover{color:var(--text)} .tb.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tp{display:none} .tp.active{display:block}
+main{padding:22px 26px;max-width:1600px;margin:0 auto}
+
+/* ── LOADING ──────────────────────────────────────────────── */
+.ldwrap{display:none;flex-direction:column;align-items:center;gap:14px;padding:70px 20px;text-align:center}
+.sp{width:42px;height:42px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── SECTION HEADING ─────────────────────────────────────── */
+.sh{display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-bottom:9px;border-bottom:2px solid var(--border);flex-wrap:wrap}
+.sh h2{font-size:1.1rem;font-weight:800}
+.badge{padding:3px 9px;border-radius:16px;font-size:.7rem;font-weight:700}
+.bsw{background:var(--asoft);color:var(--accent);border:1px solid var(--accent)}
+.bin{background:rgba(124,58,237,.1);color:var(--acc2);border:1px solid var(--acc2)}
+.bgr{background:var(--card2);color:var(--muted)}
+.bgn{background:rgba(22,163,74,.1);color:var(--green);border:1px solid var(--green)}
+.brd{background:rgba(220,38,38,.1);color:var(--red);border:1px solid var(--red)}
+
+/* ── TABLE ───────────────────────────────────────────────── */
+.tw{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+thead{background:var(--thead)}
+th{padding:10px 12px;text-align:left;color:var(--muted);font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td{padding:9px 12px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--card2)}
+.rnk{font-weight:800;color:var(--accent)}
+.sc{display:inline-block;padding:2px 8px;border-radius:9px;font-weight:700;font-size:.77rem}
+.sch{background:rgba(22,163,74,.12);color:var(--green)}
+.scm{background:rgba(217,119,6,.12);color:var(--yellow)}
+.scl{background:rgba(220,38,38,.12);color:var(--red)}
+.tsw{color:var(--accent);font-weight:700;font-size:.7rem} .tin{color:var(--acc2);font-weight:700;font-size:.7rem}
+
+/* ── CARDS ───────────────────────────────────────────────── */
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:32px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.csw{border-top:3px solid var(--accent)} .cin{border-top:3px solid var(--acc2)}
+
+.ch{padding:13px 15px 9px;background:var(--card2);display:flex;justify-content:space-between;align-items:flex-start}
+.csym{font-size:1.05rem;font-weight:800} .csub{font-size:.68rem;color:var(--muted);margin-top:1px}
+.cprice{font-size:1.2rem;font-weight:800;text-align:right}
+.cch{font-size:.72rem;margin-top:2px;text-align:right}
+.tbdg{padding:2px 8px;border-radius:10px;font-size:.66rem;font-weight:700;display:inline-block;margin-bottom:3px}
+.tbsw{background:var(--asoft);color:var(--accent)} .tbin{background:rgba(124,58,237,.1);color:var(--acc2)}
+.pos{color:var(--green)} .neg{color:var(--red)}
+
+/* Win probability bar */
+.wpbar{padding:7px 15px;border-bottom:1px solid var(--border)}
+.wplbl{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-bottom:3px}
+.wptrack{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.wpfill{height:100%;border-radius:3px;transition:width 1s}
+
+.cm{padding:9px 15px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;border-bottom:1px solid var(--border)}
+.met{text-align:center} .ml{font-size:.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px} .mv{font-size:.86rem;font-weight:700}
+
+/* Why buy box */
+.why-box{padding:9px 15px;border-bottom:1px solid var(--border);background:rgba(37,99,235,.04)}
+.why-title{font-size:.7rem;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:5px}
+.why-item{font-size:.76rem;color:var(--sub);padding:1px 0;display:flex;align-items:flex-start;gap:5px}
+
+.cbtn{width:100%;padding:6px;border:none;background:var(--card2);color:var(--accent);
+  font-weight:600;font-size:.76rem;cursor:pointer;border-bottom:1px solid var(--border);
+  transition:background .2s;display:flex;align-items:center;justify-content:center;gap:5px}
+.cbtn:hover{background:var(--asoft)}
+
+.cr{padding:10px 15px}
+.rtog{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.76rem;color:var(--muted);font-weight:600;background:none;border:none;width:100%;text-align:left;padding:0;transition:color .2s}
+.rtog:hover{color:var(--text)}
+.rb{display:none;margin-top:9px} .rb.open{display:block}
+.rt{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 0;margin-bottom:3px}
+.rt.ent{color:var(--green)} .rt.ext{color:var(--red)}
+.ri{font-size:.74rem;color:var(--muted);padding:3px 0 3px 9px;border-left:2px solid var(--border);margin-bottom:3px;line-height:1.4}
+.ri:hover{color:var(--text);border-left-color:var(--accent)}
+
+.csig{padding:7px 15px;display:flex;flex-wrap:wrap;gap:4px;border-top:1px solid var(--border)}
+.sp2{font-size:.65rem;padding:2px 6px;border-radius:7px;background:var(--card2);color:var(--muted);border:1px solid var(--border)}
+.sbull{background:rgba(22,163,74,.08);color:var(--green);border-color:rgba(22,163,74,.3)}
+.sbear{background:rgba(220,38,38,.08);color:var(--red);border-color:rgba(220,38,38,.3)}
+
+/* ── BUY NOW TAB ──────────────────────────────────────────── */
+.mktbanner{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:var(--r);margin-bottom:20px;border:1px solid var(--border)}
+.mkt-open{background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.3)}
+.mkt-closed{background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.2)}
+.mkt-pre{background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.2)}
+.mkt-icon{font-size:2rem}
+.mkt-title{font-size:1rem;font-weight:800}
+.mkt-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.conf-high{color:var(--green);font-weight:700} .conf-mod{color:var(--yellow);font-weight:700} .conf-low{color:var(--muted);font-weight:600}
+
+/* ── SELF AUDIT ───────────────────────────────────────────── */
+.as{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.ac{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+.ac h3{font-size:.95rem;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.ag{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ast{background:var(--card2);border-radius:8px;padding:8px 10px;text-align:center}
+.astl{font-size:.67rem;color:var(--muted);margin-bottom:2px;text-transform:uppercase}
+.astv{font-size:1.1rem;font-weight:800}
+.acc-ring{text-align:center;padding:8px 0} .rv{font-size:2.2rem;font-weight:900;line-height:1} .rl{font-size:.73rem;color:var(--muted);margin-top:3px}
+
+/* Self Notes */
+.notes-section{margin-top:20px;margin-bottom:20px}
+.note-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;gap:12px;box-shadow:var(--shadow)}
+.note-icon{font-size:1.5rem;flex-shrink:0}
+.note-body{flex:1}
+.note-type{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:3px}
+.note-text{font-size:.82rem;color:var(--sub);line-height:1.55}
+.note-time{font-size:.66rem;color:var(--muted);margin-top:4px}
+.status-open{color:var(--accent);font-weight:700} .status-win{color:var(--green);font-weight:700}
+.status-loss{color:var(--red);font-weight:700} .status-exp{color:var(--muted)}
+.inv-win{color:var(--green);font-weight:700} .inv-loss{color:var(--red);font-weight:700}
+
+/* ── SOCIAL / BUZZ TAB ───────────────────────────────────── */
+.lboard{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.lcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.lcard-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.lcard-title{font-size:.92rem;font-weight:800}
+.litem{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
+.lrank{font-size:1.3rem;font-weight:900;color:var(--accent);min-width:30px;text-align:center}
+.litem-body{flex:1}
+.lsym{font-size:.95rem;font-weight:800}
+.lsent{font-size:.75rem;margin-top:2px}
+.lsrc{font-size:.68rem;color:var(--muted);margin-top:3px}
+.lsnip{font-size:.72rem;color:var(--sub);margin-top:4px;line-height:1.4;font-style:italic}
+.sent-bull{color:var(--green)} .sent-bear{color:var(--red)}
+.sources-row{padding:10px 16px;font-size:.72rem;color:var(--muted);background:var(--card2);border-top:1px solid var(--border)}
+.twitter-note{background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.25);border-radius:8px;padding:10px 14px;margin:14px 0;font-size:.78rem;color:var(--sub)}
+
+/* ── CHART MODAL ──────────────────────────────────────────── */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center}
+.moverlay.open{display:flex}
+.modal{background:var(--card);border-radius:16px;width:min(92vw,1060px);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);border:1px solid var(--border);overflow:hidden}
+.mhead{padding:14px 18px;background:var(--card2);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.mtitle{font-size:.95rem;font-weight:800}
+.mclose{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:3px 7px;border-radius:5px}
+.mclose:hover{background:var(--border)}
+.mbody{flex:1;overflow-y:auto;padding:14px}
+.tfs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+.tfb{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--card2);color:var(--muted);cursor:pointer;font-size:.76rem;font-weight:600;transition:all .2s}
+.tfb.active,.tfb:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+#chart-c{height:460px;background:var(--card2);border-radius:8px}
+.cnote{font-size:.68rem;color:var(--muted);text-align:center;margin-top:5px}
+
+/* ── ALERT POPUP ──────────────────────────────────────────── */
+.almodal{display:none;position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border);border-radius:12px;width:min(370px,92vw);box-shadow:var(--shadow);z-index:600;animation:sld .3s ease}
+@keyframes sld{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.almodal.show{display:block}
+.alhead{padding:11px 15px;background:linear-gradient(135deg,var(--accent),var(--acc2));border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between}
+.alht{color:#fff;font-weight:700;font-size:.85rem} .alcnt{background:rgba(255,255,255,.25);color:#fff;border-radius:10px;padding:1px 7px;font-size:.7rem;font-weight:700}
+.albody{padding:10px 14px;max-height:240px;overflow-y:auto}
+.alitem{padding:8px 10px;border-radius:7px;margin-bottom:6px;font-size:.77rem;line-height:1.4;border-left:3px solid}
+.al-buy{background:rgba(22,163,74,.08);border-color:var(--green)}
+.al-stop{background:rgba(220,38,38,.08);border-color:var(--red)}
+.al-tgt{background:var(--asoft);border-color:var(--accent)}
+.alft{padding:9px 14px;border-top:1px solid var(--border);display:flex;gap:7px;justify-content:flex-end}
+
+/* ── ML BADGE ─────────────────────────────────────────────── */
+.mlbdg{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:.67rem;font-weight:700;background:linear-gradient(90deg,rgba(37,99,235,.15),rgba(124,58,237,.15));color:var(--accent);border:1px solid rgba(37,99,235,.25)}
+
+/* ── EMPTY ───────────────────────────────────────────────── */
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.ei{font-size:2.5rem;margin-bottom:9px}
+
+@media(max-width:768px){
+  main{padding:12px} .tabwrap,.header{padding-left:12px;padding-right:12px}
+  .cg{grid-template-columns:1fr} .as{grid-template-columns:1fr} .lboard{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="li">S</div>
+    <div><div class="ln">SwingEdge Pro</div><div class="ls">NSE AI Trading Intelligence v5.0</div></div>
+  </div>
+  <div class="hr">
+    <div class="rtimer"><span class="rdot"></span><span id="rtxt">Next refresh: 15:00</span></div>
+    <span class="mstatus bgr" id="mktBadge">Checking market…</span>
+    <button class="btn bp" id="refreshBtn" onclick="loadData()">⟳ Refresh</button>
+    <button class="ttog" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+  </div>
+</header>
+
+<div class="tabwrap"><div class="tabs">
+  <button class="tb active" onclick="switchTab('overview')">📊 Overview</button>
+  <button class="tb" onclick="switchTab('buynow')">⭐ Buy Now / Next Session</button>
+  <button class="tb" onclick="switchTab('swing')">🔄 Swing Trades</button>
+  <button class="tb" onclick="switchTab('intraday')">⚡ Intraday</button>
+  <button class="tb" onclick="switchTab('expected')">🚀 Expected Movers</button>
+  <button class="tb" onclick="switchTab('audit')">🔍 Self Audit</button>
+  <button class="tb" onclick="switchTab('buzz')">📣 Market Buzz</button>
+</div></div>
+
+<main>
+  <div class="ldwrap" id="loading"><div class="sp"></div>
+    <div style="color:var(--muted)">Fetching live NSE data…<br><small>Takes 30–60 seconds</small></div>
+  </div>
+  <div id="tab-overview"  class="tp active"></div>
+  <div id="tab-buynow"   class="tp"></div>
+  <div id="tab-swing"    class="tp"></div>
+  <div id="tab-intraday" class="tp"></div>
+  <div id="tab-expected" class="tp"></div>
+  <div id="tab-audit"    class="tp"></div>
+  <div id="tab-buzz"     class="tp"></div>
+</main>
+
+<!-- CHART MODAL -->
+<div class="moverlay" id="chartModal" onclick="closeMO(event)">
+  <div class="modal">
+    <div class="mhead">
+      <span class="mtitle" id="chartTitle">Chart</span>
+      <button class="mclose" onclick="closeChart()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="tfs" id="tfBtns">
+        <button class="tfb" data-tf="1m"  onclick="loadChart(null,'1m')">1 min</button>
+        <button class="tfb" data-tf="5m"  onclick="loadChart(null,'5m')">5 min</button>
+        <button class="tfb" data-tf="15m" onclick="loadChart(null,'15m')">15 min</button>
+        <button class="tfb" data-tf="1h"  onclick="loadChart(null,'1h')">1 Hour</button>
+        <button class="tfb active" data-tf="1d"  onclick="loadChart(null,'1d')">1 Day</button>
+        <button class="tfb" data-tf="1wk" onclick="loadChart(null,'1wk')">1 Week</button>
+        <button class="tfb" data-tf="1mo" onclick="loadChart(null,'1mo')">1 Month</button>
+      </div>
+      <div id="chart-c"></div>
+      <div class="cnote">📡 Data via Yahoo Finance · NSE has ~15 min delay · Includes EMA9 (blue), EMA20 (orange), EMA50 (purple), VWAP (pink)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ALERT POPUP -->
+<div class="almodal" id="almodal">
+  <div class="alhead">
+    <span class="alht">🔔 Price Alert</span>
+    <span class="alcnt" id="alcnt">0</span>
+  </div>
+  <div class="albody" id="albody"></div>
+  <div class="alft">
+    <button class="btn bo" onclick="snooze()">⏰ Snooze 15min</button>
+    <button class="btn bp" onclick="dismiss()">Got it</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//   GLOBALS
+// ═══════════════════════════════════════════════════════
+let data=null, activeTab='overview', curSym=null, curTF='1d';
+let countdown=900, timer=null, snoozed=false, snoozeT=null;
+
+// ═══════════════════════════════════════════════════════
+//   THEME
+// ═══════════════════════════════════════════════════════
+function initTheme(){
+  const t=localStorage.getItem('set')|| 'light';
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('themeBtn').textContent=t==='dark'?'☀️':'🌙';
+}
+function toggleTheme(){
+  const c=document.documentElement.getAttribute('data-theme');
+  const n=c==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  localStorage.setItem('set',n);
+  document.getElementById('themeBtn').textContent=n==='dark'?'☀️':'🌙';
+  if(curSym) loadChart(curSym,curTF);
+}
+
+// ═══════════════════════════════════════════════════════
+//   TABS
+// ═══════════════════════════════════════════════════════
+const TABS=['overview','buynow','swing','intraday','expected','audit','buzz'];
+function switchTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('active',TABS[i]===tab));
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='audit') loadAudit();
+  else if(tab==='buzz') loadBuzz();
+  else if(tab==='buynow') loadBuyNow();
+  else if(data) renderTab(tab,data);
+}
+
+// ═══════════════════════════════════════════════════════
+//   LOAD DATA
+// ═══════════════════════════════════════════════════════
+async function loadData(){
+  const btn=document.getElementById('refreshBtn');
+  btn.disabled=true; btn.textContent='⟳ Loading…';
+  document.getElementById('loading').style.display='flex';
+  document.querySelectorAll('.tp').forEach(p=>p.innerHTML='');
+  try{
+    const r=await fetch('/api/screener');
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d=await r.json();
+    if(d.status!=='ok') throw new Error(d.message||'Error');
+    data=d;
+    renderTab(activeTab,data);
+    resetTimer();
+    if(!snoozed) checkAlerts();
+  } catch(e){ showErr(e.message); }
+  finally{
+    document.getElementById('loading').style.display='none';
+    btn.disabled=false; btn.textContent='⟳ Refresh';
+  }
+}
+function renderTab(tab,d){
+  if(tab==='overview') renderOverview(d);
+  if(tab==='swing')    renderCards('tab-swing',d.swing_trades,'SWING','🔄 Recommended Swing Trades');
+  if(tab==='intraday') renderCards('tab-intraday',d.intraday_trades,'INTRADAY','⚡ Recommended Intraday Trades');
+  if(tab==='expected') renderCards('tab-expected',d.top20_expected,null,'🚀 Stocks Expected to Move Soon');
+}
+
+// ═══════════════════════════════════════════════════════
+//   OVERVIEW TABLE
+// ═══════════════════════════════════════════════════════
+function renderOverview(d){
+  const combined=[...d.top20_performing,...d.top20_expected];
+  const seen=new Set();const all=[];
+  for(const r of combined){ if(!seen.has(r.Symbol)){seen.add(r.Symbol);all.push(r);} }
+  all.sort((a,b)=>b.EnhancedScore-a.EnhancedScore);
+  let h=`<div class="sh"><h2>📊 Market Overview — All Scored Stocks</h2><span class="badge bgr">${all.length} stocks analysed today</span></div>
+  <div class="tw"><table><thead><tr>
+    <th>#</th><th>Company</th><th>Price ₹</th><th>Today's Change</th><th>My Score</th>
+    <th>Win Chance</th><th>Buying Pressure</th><th>Trend</th><th>Activity</th><th>20-Day Growth</th><th>Trade Type</th>
+  </tr></thead><tbody>`;
+  all.forEach((r,i)=>{
+    const ch=r.Change_1d||0;
+    const chH=ch>=0?`<span class="pos">↑ +${ch.toFixed(2)}%</span>`:`<span class="neg">↓ ${ch.toFixed(2)}%</span>`;
+    const sc=r.EnhancedScore>=75?'sch':r.EnhancedScore>=55?'scm':'scl';
+    const wp=r.WinProb||50;
+    const wpCol=wp>=65?'var(--green)':wp>=50?'var(--yellow)':'var(--red)';
+    const type=r.TradeType==='SWING'?'<span class="tsw">🔄 Swing (3-15 days)</span>':'<span class="tin">⚡ Same day</span>';
+    const sym=r.Symbol.replace("'","");
+    h+=`<tr>
+      <td class="rnk">${i+1}</td>
+      <td><span style="font-weight:700;cursor:pointer;color:var(--accent)" onclick="openChart('${sym}')">${r.Symbol}</span></td>
+      <td style="font-weight:700">₹${r.Price.toLocaleString('en-IN')}</td>
+      <td>${chH}</td>
+      <td><span class="sc ${sc}">${r.EnhancedScore}</span></td>
+      <td style="color:${wpCol};font-weight:700">${wp}%</td>
+      <td style="color:${r.RSI>70?'var(--yellow)':r.RSI>50?'var(--green)':'var(--red)'}">${r.RSI>70?'⚠️ Overheated':r.RSI>50?'✅ Healthy':'🔴 Weak'} (${r.RSI})</td>
+      <td style="color:${r.MACD_Hist>0?'var(--green)':'var(--red)'}">${r.MACD_Hist>0?'↑ Rising':'↓ Falling'}</td>
+      <td style="color:${r.Vol_Ratio>1.5?'var(--accent)':'var(--text)'}">${r.Vol_Ratio.toFixed(1)}× normal</td>
+      <td style="color:${r.Return_20d>0?'var(--green)':'var(--red)'}">${r.Return_20d>0?'↑ +':' ↓ '}${r.Return_20d.toFixed(1)}%</td>
+      <td>${type}</td>
+    </tr>`;
+  });
+  h+='</tbody></table></div>';
+  document.getElementById('tab-overview').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════
+//   STOCK CARDS
+// ═══════════════════════════════════════════════════════
+function renderCards(cid,stocks,ftype,heading){
+  if(!stocks||!stocks.length){
+    document.getElementById(cid).innerHTML='<div class="empty"><div class="ei">📭</div><p>No stocks. Refresh data.</p></div>';return;
+  }
+  const hint=ftype==='SWING'?'📅 Hold for 3–15 days | Use daily price chart | Only enter when overall market is also rising':
+    ftype==='INTRADAY'?'⚡ Buy and sell same day | Watch 5-min or 15-min chart | MUST close before 3:15 PM':
+    '🔮 Building momentum — watch these for entry in coming days';
+  const bdg=ftype==='SWING'?'<span class="badge bsw">SWING</span>':ftype==='INTRADAY'?'<span class="badge bin">INTRADAY</span>':'';
+  let h=`<div class="sh"><h2>${heading}</h2>${bdg}<span class="badge bgr">${stocks.length} stocks</span></div>
+  <p style="font-size:.77rem;color:var(--muted);margin-bottom:16px">${hint}</p><div class="cg">`;
+  stocks.forEach((r,idx)=>{
+    const tt=r.TradeType||ftype||'SWING';
+    const cc=tt==='SWING'?'csw':'cin';
+    const tb=tt==='SWING'?'tbsw':'tbin';
+    const ch=r.Change_1d||0;
+    const chH=ch>=0?`<span class="pos">↑ +${ch.toFixed(2)}%</span>`:`<span class="neg">↓ ${ch.toFixed(2)}%</span>`;
+    const sc=r.EnhancedScore>=75?'#16a34a':r.EnhancedScore>=55?'#d97706':'#dc2626';
+    const wp=r.WinProb||50; const wpCol=wp>=65?'var(--green)':wp>=50?'var(--yellow)':'var(--red)';
+    const ent=(r.EntryRules||[]).map(ru=>`<div class="ri">✅ ${ru}</div>`).join('');
+    const ext=(r.ExitRules||[]).map(ru=>`<div class="ri">${ru}</div>`).join('');
+    const sigs=Object.entries(r.Signals||{}).map(([k,v])=>{
+      const b=v.includes('✅')||v.toLowerCase().includes('healthy')||v.toLowerCase().includes('strong');
+      const br=v.includes('⬇️')||v.toLowerCase().includes('weak')||v.toLowerCase().includes('slow');
+      return `<span class="sp2 ${b?'sbull':br?'sbear':''}">${k}: ${v}</span>`;
+    }).join('');
+    const sym=r.Symbol.replace("'","");
+    h+=`<div class="card ${cc}">
+      <div class="ch">
+        <div>
+          <div class="csym">#${idx+1} ${r.Symbol} <span class="mlbdg">🤖 AI</span></div>
+          <div class="csub">Overall Score: ${r.EnhancedScore}/100 · Daily range: ₹${r.ATR?.toFixed(0)}</div>
+        </div>
+        <div>
+          <div><span class="tbdg ${tb}">${tt==='SWING'?'Hold 3-15 days':'Same day trade'}</span></div>
+          <div class="cprice">₹${r.Price.toLocaleString('en-IN')}</div>
+          <div class="cch">${chH}</div>
+        </div>
+      </div>
+      <div class="wpbar">
+        <div class="wplbl">
+          <span>My AI Win Prediction</span>
+          <span style="color:${wpCol};font-weight:700">${wp}% chance of success</span>
+        </div>
+        <div class="wptrack"><div class="wpfill" style="width:${wp}%;background:${wpCol}"></div></div>
+      </div>
+      <div class="cm">
+        <div class="met"><div class="ml">Buying pressure</div>
+          <div class="mv" style="color:${r.RSI>70?'var(--yellow)':r.RSI>50?'var(--green)':'var(--red)'}">${r.RSI}/100</div></div>
+        <div class="met"><div class="ml">20-day growth</div>
+          <div class="mv" style="color:${r.Return_20d>0?'var(--green)':'var(--red)'}">${r.Return_20d>0?'+':''}${r.Return_20d?.toFixed(1)}%</div></div>
+        <div class="met"><div class="ml">Activity level</div>
+          <div class="mv" style="color:${r.Vol_Ratio>1.5?'var(--accent)':'var(--text)'}">${r.Vol_Ratio?.toFixed(1)}× normal</div></div>
+        <div class="met"><div class="ml">Trend strength</div>
+          <div class="mv" style="color:${r.ADX>25?'var(--accent)':'var(--muted)'}">${r.ADX>25?'Strong':'Mild'} (${r.ADX?.toFixed(0)})</div></div>
+        <div class="met"><div class="ml">Today's avg price</div>
+          <div class="mv">₹${r.VWAP?.toLocaleString('en-IN')}</div></div>
+        <div class="met"><div class="ml">Safety net (SL)</div>
+          <div class="mv" style="color:var(--red)">₹${r.StopLoss}</div></div>
+      </div>
+      <button class="cbtn" onclick="openChart('${sym}')">📈 Open Live Chart &nbsp;·&nbsp; <small>1min · 5min · 15min · 1H · 1D · 1W · 1M</small></button>
+      <div class="cr">
+        <button class="rtog" onclick="toggleR('rb-${sym}',this)"><span class="arr">▶</span>&nbsp; What to do — Entry & Exit Guide</button>
+        <div class="rb" id="rb-${sym}">
+          <div style="margin-bottom:8px"><div class="rt ent">WHEN TO BUY (Entry Rules)</div>${ent}</div>
+          <div><div class="rt ext">WHEN TO SELL (Exit Rules)</div>${ext}</div>
+        </div>
+      </div>
+      <div class="csig">${sigs}</div>
+    </div>`;
+  });
+  h+='</div>';
+  document.getElementById(cid).innerHTML=h;
+}
+function toggleR(id,btn){
+  const el=document.getElementById(id);
+  const o=el.classList.toggle('open');
+  btn.querySelector('.arr').textContent=o?'▼':'▶';
+}
+
+// ═══════════════════════════════════════════════════════
+//   BUY NOW / NEXT SESSION TAB
+// ═══════════════════════════════════════════════════════
+async function loadBuyNow(){
+  const el=document.getElementById('tab-buynow');
+  el.innerHTML='<div class="ldwrap" style="display:flex"><div class="sp"></div><span style="color:var(--muted)">Loading best picks…</span></div>';
+  try{
+    const r=await fetch('/api/buy_now');
+    const d=await r.json();
+    if(d.status!=='ok') throw new Error(d.message);
+    // Update market badge
+    const badge=document.getElementById('mktBadge');
+    badge.className='mstatus '+(d.market_status==='open'?'ms-open':d.market_status==='pre'?'ms-pre':'ms-closed');
+    badge.textContent=d.market_status==='open'?'🟢 Market Open':d.market_status==='pre'?'🕐 Pre-market':'🔴 Market Closed';
+    renderBuyNow(d);
+  } catch(e){ el.innerHTML=`<div class="empty"><div class="ei">⚠️</div><p>${e.message}</p></div>`; }
+}
+
+function renderBuyNow(d){
+  const mktCls=d.market_status==='open'?'mkt-open':d.market_status==='pre'?'mkt-pre':'mkt-closed';
+  const mktIcon=d.market_status==='open'?'🟢':d.market_status==='pre'?'🕐':'🔴';
+  let h=`
+  <div class="mktbanner ${mktCls}">
+    <div class="mkt-icon">${mktIcon}</div>
+    <div>
+      <div class="mkt-title">${d.section_label}</div>
+      <div class="mkt-sub">${d.market_message} · ${d.time_ist} · AI-ranked by win probability</div>
+    </div>
+  </div>`;
+
+  function renderPickSection(title, picks, type) {
+    if(!picks||!picks.length) return `<div class="empty"><div class="ei">📭</div><p>No ${type} picks right now.</p></div>`;
+    const bdg=type==='SWING'?'<span class="badge bsw">SWING · 3–15 day hold</span>':'<span class="badge bin">INTRADAY · Close same day</span>';
+    let s=`<div class="sh"><h2>${title}</h2>${bdg}</div><div class="cg">`;
+    picks.forEach((r,idx)=>{
+      const conf=r.confidence==='Very High'?'conf-high':r.confidence==='High'?'conf-high':'conf-mod';
+      const wp=r.WinProb||50; const wpC=wp>=65?'var(--green)':wp>=50?'var(--yellow)':'var(--red)';
+      const ch=r.Change_1d||0;
+      const chH=ch>=0?`<span class="pos">↑ +${ch.toFixed(2)}%</span>`:`<span class="neg">↓ ${ch.toFixed(2)}%</span>`;
+      const sym=r.Symbol.replace("'","");
+      const why=(r.why_buy||[]).map(w=>`<div class="why-item">✅ <span>${w}</span></div>`).join('');
+      s+=`<div class="card ${type==='SWING'?'csw':'cin'}">
+        <div class="ch">
+          <div>
+            <div class="csym">#${idx+1} ${r.Symbol}</div>
+            <div class="csub">Confidence: <span class="${conf}">${r.confidence||'Moderate'}</span></div>
+          </div>
+          <div>
+            <div class="cprice">₹${r.Price.toLocaleString('en-IN')}</div>
+            <div class="cch">${chH}</div>
+          </div>
+        </div>
+        <div class="wpbar">
+          <div class="wplbl"><span>AI Win Prediction</span><span style="color:${wpC};font-weight:700">${wp}% chance</span></div>
+          <div class="wptrack"><div class="wpfill" style="width:${wp}%;background:${wpC}"></div></div>
+        </div>
+        ${why?`<div class="why-box"><div class="why-title">Why I like this stock</div>${why}</div>`:''}
+        <div class="cm">
+          <div class="met"><div class="ml">Entry price</div><div class="mv" style="color:var(--accent)">₹${r.EntryTrigger}</div></div>
+          <div class="met"><div class="ml">First target</div><div class="mv" style="color:var(--green)">₹${r.Target1}</div></div>
+          <div class="met"><div class="ml">Safety net</div><div class="mv" style="color:var(--red)">₹${r.StopLoss}</div></div>
+          <div class="met"><div class="ml">Potential gain</div><div class="mv" style="color:var(--green)">${r.reward_plain?.split('=')[1]?.trim()||'—'}</div></div>
+          <div class="met"><div class="ml">Max loss</div><div class="mv" style="color:var(--red)">${r.risk_plain?.split('limits')[1]?.trim()||'—'}</div></div>
+          <div class="met"><div class="ml">AI Score</div><div class="mv">${r.EnhancedScore}/100</div></div>
+        </div>
+        <button class="cbtn" onclick="openChart('${sym}')">📈 View Live Chart</button>
+      </div>`;
+    });
+    s+='</div>';
+    return s;
+  }
+
+  h+=renderPickSection('🔄 Best Swing Trades', d.swing_picks, 'SWING');
+  h+=renderPickSection('⚡ Best Intraday Trades', d.intraday_picks, 'INTRADAY');
+  document.getElementById('tab-buynow').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════
+//   SELF AUDIT
+// ═══════════════════════════════════════════════════════
+async function loadAudit(){
+  document.getElementById('tab-audit').innerHTML='<div class="ldwrap" style="display:flex"><div class="sp"></div><span style="color:var(--muted)">Loading audit…</span></div>';
+  try{
+    const r=await fetch('/api/audit'); const d=await r.json();
+    renderAudit(d);
+  } catch(e){
+    document.getElementById('tab-audit').innerHTML=`<div class="empty"><div class="ei">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+function renderAudit(d){
+  const sw=d.stats?.SWING||{};const intra=d.stats?.INTRADAY||{};const notes=d.self_notes||[];
+  function sCard(t,icon,s,col){
+    const acc=s.accuracy_pct||0;const aw=s.avg_win_pct||0;const al=s.avg_loss_pct||0;const roi=s.net_roi_pct||0;
+    const ac=acc>=60?'var(--green)':acc>=40?'var(--yellow)':'var(--red)';
+    return `<div class="ac">
+      <h3>${icon} ${t} <span class="badge" style="background:${col}22;color:${col};border:1px solid ${col}">${s.total||0} total</span></h3>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center">
+        <div class="acc-ring"><div class="rv" style="color:${ac}">${acc.toFixed(0)}%</div><div class="rl">Accuracy</div></div>
+        <div class="ag">
+          <div class="ast"><div class="astl">Open</div><div class="astv" style="color:var(--accent)">${s.open||0}</div></div>
+          <div class="ast"><div class="astl">Closed</div><div class="astv">${s.closed||0}</div></div>
+          <div class="ast"><div class="astl">✅ Won</div><div class="astv" style="color:var(--green)">${s.wins||0}</div></div>
+          <div class="ast"><div class="astl">❌ Lost</div><div class="astv" style="color:var(--red)">${s.losses||0}</div></div>
+          <div class="ast"><div class="astl">Avg profit</div><div class="astv" style="color:var(--green)">+${aw.toFixed(1)}%</div></div>
+          <div class="ast"><div class="astl">Avg loss</div><div class="astv" style="color:var(--red)">${al.toFixed(1)}%</div></div>
+        </div>
+      </div>
+      <div style="margin-top:10px;padding:8px 12px;background:var(--card2);border-radius:7px;font-size:.8rem">
+        💰 If you invested ₹1 lakh per trade, average net result: 
+        <strong style="color:${roi>=0?'var(--green)':'var(--red)'}">${roi>=0?'+':''}${roi.toFixed(1)}% per trade</strong>
+      </div>
+    </div>`;
+  }
+  let notesHTML='';
+  if(notes.length===0){
+    notesHTML=`<div class="note-card"><div class="note-icon">🌱</div><div class="note-body">
+      <div class="note-type">Getting started</div>
+      <div class="note-text">I haven't learned anything yet — run the screener a few times and let predictions close (win or lose) and I'll start sharing what I've discovered here.</div>
+    </div></div>`;
+  } else {
+    notesHTML=notes.map(n=>`<div class="note-card">
+      <div class="note-icon">${n.icon||'📌'}</div>
+      <div class="note-body">
+        <div class="note-type">${n.type||'Note'}</div>
+        <div class="note-text">${n.note}</div>
+        <div class="note-time">Updated: ${n.updated||n.created_at||''}</div>
+      </div>
+    </div>`).join('');
+  }
+  // Prediction table
+  const preds=d.predictions||[];
+  let trows=preds.length?preds.slice(0,100).map((p,i)=>{
+    const sts=p.status;
+    const stsc=sts==='OPEN'?'status-open':sts.startsWith('WIN')?'status-win':sts==='LOSS'?'status-loss':'status-exp';
+    const pnl=p.profit_loss_pct;const inv=p.investment_100k;
+    const invStr=inv!=null?`₹${inv.toLocaleString('en-IN')} (${inv-100000>=0?'+':'-'}₹${Math.abs(inv-100000).toLocaleString('en-IN')})`:'Still open';
+    const invCls=inv!=null?(inv>=100000?'inv-win':'inv-loss'):'';
+    const reason=sts==='WIN_T1'?'✅ Hit first target':sts==='WIN_T2'?'✅ Hit second target':sts==='LOSS'?'❌ Hit safety net':sts==='EXPIRED'?'⏰ Time expired':'🔵 Active';
+    const wp=p.win_prob_at_entry?`${p.win_prob_at_entry}%`:'—';
+    return `<tr>
+      <td>${p.logged_date}</td>
+      <td style="font-weight:700">${p.symbol}</td>
+      <td class="${p.trade_type==='SWING'?'tsw':'tin'}">${p.trade_type==='SWING'?'Hold 3-15d':'Same day'}</td>
+      <td>₹${p.entry_price?.toLocaleString('en-IN')}</td>
+      <td style="color:var(--green)">₹${p.target1?.toFixed(0)}</td>
+      <td style="color:var(--red)">₹${p.stop_loss?.toFixed(0)}</td>
+      <td class="${stsc}">${sts}</td>
+      <td style="color:${pnl==null?'var(--muted)':pnl>=0?'var(--green)':'var(--red)'}">
+        ${pnl==null?'—':(pnl>=0?'+':'')+pnl.toFixed(2)+'%'}</td>
+      <td class="${invCls}">${invStr}</td>
+      <td style="font-size:.74rem;color:var(--muted)">${reason}</td>
+      <td style="color:var(--accent)">${wp}</td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="11" style="text-align:center;padding:28px;color:var(--muted)">No predictions yet. Run screener first!</td></tr>`;
+
+  document.getElementById('tab-audit').innerHTML=`
+  <div class="sh"><h2>🔍 Self Audit — How accurate am I?</h2><span class="badge bgr">${preds.length} total predictions tracked</span></div>
+  <p style="font-size:.79rem;color:var(--muted);margin-bottom:16px">📌 Each prediction is tracked using a hypothetical ₹1,00,000 investment. Win = Target 1 or 2 hit. Loss = Safety net triggered.</p>
+  <div class="as">${sCard('Swing Trades','🔄',sw,'#2563eb')}${sCard('Intraday Trades','⚡',intra,'#7c3aed')}</div>
+  <div class="notes-section">
+    <div class="sh"><h2>🧠 What I've Learned — Self Notes</h2><span class="badge bgn">${notes.length} insights</span></div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">My AI engine learns from every prediction. Here's what I've figured out so far:</p>
+    ${notesHTML}
+  </div>
+  <div class="sh" style="margin-top:8px"><h2>📋 Full Prediction History</h2></div>
+  <div class="tw"><table>
+    <thead><tr><th>Date</th><th>Stock</th><th>Type</th><th>Entry ₹</th><th>Target</th><th>Safety Net</th><th>Result</th><th>Profit/Loss</th><th>₹1 Lakh Result</th><th>Reason</th><th>Win Chance</th></tr></thead>
+    <tbody>${trows}</tbody>
+  </table></div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//   MARKET BUZZ (Social Media)
+// ═══════════════════════════════════════════════════════
+async function loadBuzz(){
+  document.getElementById('tab-buzz').innerHTML='<div class="ldwrap" style="display:flex"><div class="sp"></div><span style="color:var(--muted)">Scanning Reddit, news feeds & more…</span></div>';
+  try{
+    const r=await fetch('/api/social');const d=await r.json();
+    renderBuzz(d);
+  } catch(e){
+    document.getElementById('tab-buzz').innerHTML=`<div class="empty"><div class="ei">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+function renderBuzz(d){
+  const twNote=d.twitter_note?`<div class="twitter-note">🐦 <strong>Twitter/X:</strong> ${d.twitter_note} — Reddit and news RSS are active sources.</div>`:'';
+  function lcard(title,icon,stocks,mode){
+    const col=mode==='buy'?'var(--green)':'var(--red)';
+    const bdg=mode==='buy'?'<span class="badge bgn">Most Bullish</span>':'<span class="badge brd">Most Bearish</span>';
+    if(!stocks||!stocks.length) return `<div class="lcard"><div class="lcard-head"><span class="lcard-title">${icon} ${title}</span>${bdg}</div><div style="padding:20px;text-align:center;color:var(--muted)">No strong signals found in recent posts.</div></div>`;
+    let rows=stocks.map((s,i)=>{
+      const net=s.sentiment_pct||0;
+      const sntCol=net>0?'var(--green)':'var(--red)';
+      const posts=s.posts||[];
+      const snip=posts[0]?.snippet||'';
+      const src=posts.map(p=>p.source).filter((v,i,a)=>a.indexOf(v)===i).slice(0,2).join(', ');
+      return `<div class="litem">
+        <div class="lrank" style="color:${col}">${i+1}</div>
+        <div class="litem-body">
+          <div class="lsym">${s.symbol}</div>
+          <div class="lsent">
+            <span class="${mode==='buy'?'sent-bull':'sent-bear'}">${mode==='buy'?'🟢 Bullish':'🔴 Bearish'}</span>
+            · Community score: <strong>${s.total_community_score?.toLocaleString()}</strong>
+            · Sentiment: <span style="color:${sntCol};font-weight:700">${net>0?'+':''}${net.toFixed(0)}%</span>
+          </div>
+          <div class="lsrc">📡 Sources: ${src||'multiple'}</div>
+          ${snip?`<div class="lsnip">"${snip}"</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="lcard">
+      <div class="lcard-head"><span class="lcard-title">${icon} ${title}</span>${bdg}</div>
+      ${rows}
+      <div class="sources-row">Ranked by community engagement × sentiment score</div>
+    </div>`;
+  }
+
+  document.getElementById('tab-buzz').innerHTML=`
+  <div class="sh"><h2>📣 Market Buzz — What People Are Saying</h2><span class="badge bgr">${d.total_posts||0} posts scanned</span></div>
+  <p style="font-size:.79rem;color:var(--muted);margin-bottom:14px">
+    Scanned Reddit (IndianStockMarket, DalalStreetTalks), Google News, and Economic Times. 
+    Sentiment is calculated from buy/sell language + TextBlob AI analysis. 
+    ${d.generated_at?'Updated: '+d.generated_at:''}
+  </p>
+  ${twNote}
+  <div class="lboard">
+    ${lcard('Top 5 — Market is Excited About These','🚀', d.buy,'buy')}
+    ${lcard('Top 5 — Market is Worried About These','⚠️', d.sell,'sell')}
+  </div>
+  <div style="margin-top:16px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);font-size:.79rem;color:var(--muted)">
+    ⚠️ <strong>Disclaimer:</strong> Social media sentiment is NOT financial advice. 
+    These are just what people are talking about online. Always combine with technical analysis above before making any decisions.
+    ${d.note||''}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//   CHART
+// ═══════════════════════════════════════════════════════
+function openChart(sym,tf){
+  curSym=sym; curTF=tf||'1d';
+  document.getElementById('chartTitle').textContent=`${sym} — Live Price Chart`;
+  document.getElementById('chartModal').classList.add('open');
+  document.querySelectorAll('.tfb').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tf')===curTF));
+  loadChart(sym,curTF);
+}
+async function loadChart(sym,tf){
+  const s=sym||curSym; if(!s) return;
+  curSym=s; curTF=tf||'1d';
+  document.querySelectorAll('.tfb').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tf')===curTF));
+  const c=document.getElementById('chart-c');
+  c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:10px"><div class="sp"></div>Loading chart…</div>';
+  try{
+    const r=await fetch(`/api/chart/${s}/${curTF}`);const d=await r.json();
+    if(d.error) throw new Error(d.error);
+    drawChart(d);
+  } catch(e){
+    c.innerHTML=`<div class="empty" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center"><div class="ei">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+function drawChart(d){
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  const bg=dark?'#1c2030':'#f8fafc';const grid=dark?'#2a2f3e':'#e2e6f0';const txt=dark?'#94a3b8':'#6b7280';const paper=dark?'#151820':'#fff';
+  const candle={type:'candlestick',x:d.dates,open:d.open,high:d.high,low:d.low,close:d.close,name:d.symbol,
+    increasing:{line:{color:'#16a34a'},fillcolor:'#16a34a'},decreasing:{line:{color:'#dc2626'},fillcolor:'#dc2626'},yaxis:'y',showlegend:false};
+  const vol={type:'bar',x:d.dates,y:d.volume,name:'Volume',
+    marker:{color:d.close.map((c,i)=>i>0?(c>=d.close[i-1]?'rgba(22,163,74,.4)':'rgba(220,38,38,.4)'):'rgba(100,116,139,.3)')},
+    yaxis:'y2',showlegend:false};
+  const ema9 ={type:'scatter',x:d.dates,y:d.ema9, name:'9-day avg',  line:{color:'#2563eb',width:1.5},yaxis:'y',mode:'lines'};
+  const ema20={type:'scatter',x:d.dates,y:d.ema20,name:'20-day avg', line:{color:'#d97706',width:1.5},yaxis:'y',mode:'lines'};
+  const ema50={type:'scatter',x:d.dates,y:d.ema50,name:'50-day avg', line:{color:'#7c3aed',width:1.5},yaxis:'y',mode:'lines'};
+  const vwap ={type:'scatter',x:d.dates,y:d.vwap, name:"Today's avg",line:{color:'#ec4899',width:1.5,dash:'dot'},yaxis:'y',mode:'lines'};
+  const layout={paper_bgcolor:paper,plot_bgcolor:bg,margin:{l:55,r:20,t:15,b:40},
+    xaxis:{type:'date',rangeslider:{visible:false},gridcolor:grid,tickfont:{color:txt,size:11}},
+    yaxis:{domain:[0.28,1],gridcolor:grid,tickfont:{color:txt,size:11},tickformat:',.0f',side:'right'},
+    yaxis2:{domain:[0,0.24],gridcolor:grid,tickfont:{color:txt,size:10},showgrid:false,side:'right'},
+    legend:{x:0.01,y:0.98,font:{color:txt,size:11},bgcolor:'rgba(0,0,0,0)',orientation:'h'},
+    dragmode:'zoom',font:{family:'Segoe UI,system-ui,sans-serif'}};
+  Plotly.newPlot('chart-c',[candle,vol,ema9,ema20,ema50,vwap],layout,{responsive:true,displayModeBar:true,modeBarButtonsToRemove:['sendDataToCloud']});
+}
+function closeMO(e){if(e.target===document.getElementById('chartModal')) closeChart();}
+function closeChart(){document.getElementById('chartModal').classList.remove('open');try{Plotly.purge('chart-c');}catch(e){}}
+
+// ═══════════════════════════════════════════════════════
+//   ALERTS
+// ═══════════════════════════════════════════════════════
+async function checkAlerts(){
+  if(snoozed) return;
+  try{
+    const r=await fetch('/api/alerts');const d=await r.json();
+    if(d.alerts&&d.alerts.length>0) showAlert(d.alerts);
+  } catch(e){}
+}
+function showAlert(alerts){
+  const modal=document.getElementById('almodal');
+  const body=document.getElementById('albody');
+  document.getElementById('alcnt').textContent=alerts.length;
+  body.innerHTML=alerts.map(a=>{
+    const cls=a.type==='BUY_ALERT'?'al-buy':a.type==='STOP_ALERT'?'al-stop':'al-tgt';
+    return `<div class="alitem ${cls}">${a.msg}${a.win_prob?` <em style="font-size:.7rem;color:var(--muted)">[AI win chance: ${a.win_prob}%]</em>`:''}`;
+  }).join('');
+  modal.classList.add('show');
+}
+function dismiss(){document.getElementById('almodal').classList.remove('show');}
+function snooze(){dismiss();snoozed=true;if(snoozeT)clearTimeout(snoozeT);snoozeT=setTimeout(()=>{snoozed=false;},900000);}
+
+// ═══════════════════════════════════════════════════════
+//   TIMER
+// ═══════════════════════════════════════════════════════
+function resetTimer(){
+  countdown=900;if(timer)clearInterval(timer);
+  timer=setInterval(()=>{
+    countdown--;
+    const m=Math.floor(countdown/60).toString().padStart(2,'0');
+    const s=(countdown%60).toString().padStart(2,'0');
+    document.getElementById('rtxt').textContent=`Next refresh: ${m}:${s}`;
+    if(countdown<=0) loadData();
+  },1000);
+}
+function showErr(msg){
+  document.getElementById('tab-'+activeTab).innerHTML=
+    `<div class="empty"><div class="ei">⚠️</div><p style="color:var(--red);font-weight:600">Error: ${msg}</p><button class="btn bp" style="margin-top:12px" onclick="loadData()">Try Again</button></div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//   INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{initTheme();loadData();});
+</script>
+</body>
+</html>

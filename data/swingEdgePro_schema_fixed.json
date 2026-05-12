@@ -1,0 +1,3476 @@
+{
+  "_meta": {
+    "title": "SwingEdge Pro — FINAL COMPLETE Application Schema",
+    "version": "3.0_FINAL",
+    "description": "100% complete JSON schema for standalone laptop swing trading app covering Indian + US equities with all features, stock-specific entry/exit rules, all indicators with entry/exit rules, all missing functionalities, notification system, AI prediction, local storage, login protection, and modern dark UI.",
+    "author": "SwingEdge AI",
+    "date": "May 2025",
+    "build_order": "A(Auth+DB) → B(Data+Indicators) → C(Scoring+Prediction) → D(UI Screens) → E(Alerts+Notifications) → F(Analytics+Polish) → G(Packaging)",
+    "schema_version": "3.0_FINAL_FIXED",
+    "last_updated": "2025-05-10",
+    "fixes_applied": [
+      "Added 'name' field to all technical_indicators entries",
+      "Added 'name' and 'title' to ui_screens.9_settings",
+      "Added 'name' to all advanced_indicators_extended entries",
+      "Updated schema_version to 3.0_FINAL_FIXED"
+    ]
+  },
+  "application": {
+    "name": "SwingEdge Pro",
+    "tagline": "Elite Indian & US Equity Swing Trading Intelligence",
+    "window": {
+      "default_width": 1440,
+      "default_height": 900,
+      "min_width": 1200,
+      "min_height": 700,
+      "fullscreen_on_start": false,
+      "resizable": true,
+      "theme": {
+        "mode": "dark",
+        "primary_color": "#00D4FF",
+        "secondary_color": "#FF6B35",
+        "background": "#0A0E1A",
+        "surface": "#12182B",
+        "card_bg": "#1A2035",
+        "border": "#2A3050",
+        "text_primary": "#FFFFFF",
+        "text_secondary": "#8892A4",
+        "success": "#00E676",
+        "danger": "#FF5252",
+        "warning": "#FFB300",
+        "chart_up": "#00E676",
+        "chart_down": "#FF5252",
+        "font_family": "Inter, Roboto, sans-serif",
+        "font_size_base": 14,
+        "border_radius": 12,
+        "animation_speed_ms": 200
+      }
+    }
+  },
+  "authentication": {
+    "type": "local_password_hash",
+    "description": "Single-user local login — no cloud auth. Password stored as SHA-256 hash in local SQLite.",
+    "fields": {
+      "username": {
+        "type": "string",
+        "default": "admin",
+        "editable": true
+      },
+      "password": {
+        "type": "string",
+        "storage": "SHA-256 hash in local DB",
+        "min_length": 8
+      },
+      "pin": {
+        "type": "4_digit_numeric",
+        "description": "Quick PIN for fast login after initial session",
+        "optional": true
+      },
+      "auto_lock": {
+        "enabled": true,
+        "inactivity_minutes": 30,
+        "description": "Lock screen after inactivity"
+      },
+      "biometric": {
+        "enabled": false,
+        "note": "Optional — Windows Hello / macOS Touch ID via platform API"
+      },
+      "session_token": {
+        "type": "JWT",
+        "expiry_hours": 24,
+        "storage": "local memory only"
+      }
+    },
+    "login_screen": {
+      "logo": "SwingEdge Pro logo + animated candlestick background",
+      "fields_shown": [
+        "username",
+        "password"
+      ],
+      "forgot_password": "Reset via secret answer stored locally",
+      "max_attempts": 5,
+      "lockout_minutes": 15
+    }
+  },
+  "database": {
+    "engine": "SQLite",
+    "file_path": "{USER_HOME}/SwingEdgePro/data/swingpro.db",
+    "backup_path": "{USER_HOME}/SwingEdgePro/backups/",
+    "auto_backup": {
+      "enabled": true,
+      "frequency": "daily",
+      "max_backups": 30
+    },
+    "tables": {
+      "users": {
+        "columns": [
+          "id",
+          "username",
+          "password_hash",
+          "pin_hash",
+          "created_at",
+          "last_login"
+        ],
+        "primary_key": "id"
+      },
+      "watchlist": {
+        "columns": [
+          "id",
+          "ticker",
+          "exchange",
+          "name",
+          "sector",
+          "added_date",
+          "alert_buy_price",
+          "alert_sell_price",
+          "notes"
+        ],
+        "primary_key": "id"
+      },
+      "trades": {
+        "columns": [
+          "id",
+          "ticker",
+          "exchange",
+          "entry_price",
+          "target1",
+          "target2",
+          "stop_loss",
+          "entry_date",
+          "exit_price",
+          "exit_date",
+          "exit_reason",
+          "profit_loss",
+          "rr_ratio",
+          "status",
+          "notes"
+        ],
+        "primary_key": "id",
+        "status_enum": [
+          "OPEN",
+          "TARGET1_HIT",
+          "TARGET2_HIT",
+          "STOP_HIT",
+          "TIME_EXIT",
+          "CLOSED"
+        ]
+      },
+      "alerts": {
+        "columns": [
+          "id",
+          "ticker",
+          "alert_type",
+          "trigger_price",
+          "condition",
+          "triggered",
+          "triggered_at",
+          "channel",
+          "sent"
+        ],
+        "alert_type_enum": [
+          "PRICE_BUY",
+          "PRICE_SELL",
+          "STOP_LOSS",
+          "TARGET1",
+          "TARGET2",
+          "PATTERN_DETECTED",
+          "NEWS_ALERT",
+          "VIX_ALERT",
+          "FII_ALERT"
+        ],
+        "channel_enum": [
+          "desktop",
+          "email",
+          "whatsapp",
+          "all"
+        ]
+      },
+      "ohlcv_cache": {
+        "columns": [
+          "ticker",
+          "exchange",
+          "date",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume",
+          "delivery_volume",
+          "delivery_pct",
+          "cached_at"
+        ],
+        "description": "Local OHLCV cache to reduce API calls"
+      },
+      "indicator_cache": {
+        "columns": [
+          "ticker",
+          "date",
+          "ema9",
+          "ema20",
+          "ema50",
+          "ema200",
+          "rsi14",
+          "macd_line",
+          "macd_signal",
+          "macd_hist",
+          "atr14",
+          "bb_upper",
+          "bb_middle",
+          "bb_lower",
+          "obv",
+          "volume_ratio",
+          "stoch_k",
+          "stoch_d",
+          "golden_cross",
+          "score"
+        ],
+        "description": "Pre-computed indicators stored locally for speed"
+      },
+      "news_feed": {
+        "columns": [
+          "id",
+          "headline",
+          "source",
+          "url",
+          "tickers_mentioned",
+          "sentiment",
+          "published_at",
+          "fetched_at"
+        ],
+        "sentiment_enum": [
+          "BULLISH",
+          "BEARISH",
+          "NEUTRAL"
+        ]
+      },
+      "settings": {
+        "columns": [
+          "key",
+          "value",
+          "updated_at"
+        ],
+        "description": "All app settings stored as key-value pairs"
+      },
+      "scan_results": {
+        "columns": [
+          "id",
+          "scan_date",
+          "ticker",
+          "exchange",
+          "score",
+          "tier",
+          "pattern_detected",
+          "rsi",
+          "macd_signal",
+          "ema_alignment",
+          "volume_ratio",
+          "entry_low",
+          "entry_high",
+          "target1",
+          "target2",
+          "stop_loss",
+          "rr_ratio",
+          "recommended_phase"
+        ],
+        "description": "Daily scan output stored for history"
+      },
+      "portfolio": {
+        "columns": [
+          "id",
+          "ticker",
+          "exchange",
+          "quantity",
+          "avg_buy_price",
+          "current_price",
+          "invested_value",
+          "current_value",
+          "unrealized_pnl",
+          "unrealized_pnl_pct",
+          "sector",
+          "buy_date",
+          "phase"
+        ],
+        "description": "Active portfolio holdings"
+      }
+    }
+  },
+  "ui_screens": {
+    "1_login": {
+      "name": "Login Screen",
+      "components": [
+        "AnimatedCandlestickBackground",
+        "LogoAnimation",
+        "UsernameField",
+        "PasswordField",
+        "PINPad",
+        "LoginButton",
+        "VersionLabel"
+      ],
+      "transitions": "Fade in on load; slide up on success"
+    },
+    "2_dashboard": {
+      "name": "Main Dashboard",
+      "layout": "Sidebar + Main Content Area",
+      "sidebar_items": [
+        "Dashboard",
+        "Live Scanner",
+        "Stock Analysis",
+        "Watchlist",
+        "Portfolio",
+        "Trade Journal",
+        "News Feed",
+        "Alerts Manager",
+        "Settings"
+      ],
+      "widgets": {
+        "market_pulse_bar": {
+          "position": "top",
+          "data_shown": [
+            "Nifty 50 live",
+            "Sensex live",
+            "Bank Nifty live",
+            "India VIX",
+            "Gift Nifty",
+            "S&P 500",
+            "Nasdaq",
+            "Crude Oil",
+            "Gold",
+            "USD/INR",
+            "FII Flow today"
+          ],
+          "refresh_seconds": 15,
+          "style": "scrolling ticker tape + color coded green/red"
+        },
+        "market_mood_meter": {
+          "type": "radial_gauge",
+          "range": "Extreme Fear → Fear → Neutral → Greed → Extreme Greed",
+          "inputs": [
+            "VIX level",
+            "FII flow",
+            "Nifty vs EMA20",
+            "PCR ratio",
+            "Advance-Decline ratio"
+          ],
+          "position": "top-right card"
+        },
+        "top_opportunities": {
+          "type": "card_grid",
+          "columns": 3,
+          "shows": "Top 6 swing trade setups from latest scan",
+          "each_card": [
+            "ticker",
+            "score",
+            "pattern",
+            "buy zone",
+            "target",
+            "stop_loss",
+            "R:R badge",
+            "tier badge",
+            "mini sparkline chart"
+          ]
+        },
+        "portfolio_summary": {
+          "type": "mini_dashboard",
+          "shows": [
+            "Total invested",
+            "Current value",
+            "Unrealized P&L ₹",
+            "Unrealized P&L %",
+            "Active trades count",
+            "Best performer",
+            "Worst performer"
+          ]
+        },
+        "recent_alerts": {
+          "type": "notification_panel",
+          "shows": "Last 10 alerts fired with timestamp and stock name"
+        },
+        "nifty_chart_mini": {
+          "type": "live_candlestick_chart",
+          "timeframe": "15-min candles",
+          "shows": [
+            "EMA20",
+            "EMA50",
+            "Volume bars"
+          ],
+          "refresh_seconds": 60
+        },
+        "sector_heatmap": {
+          "type": "heatmap_grid",
+          "sectors": [
+            "IT",
+            "Bank",
+            "Pharma",
+            "Auto",
+            "FMCG",
+            "Metal",
+            "Infra",
+            "Energy",
+            "Telecom",
+            "Realty"
+          ],
+          "color_by": "MTD return %",
+          "click_action": "Open sector stocks screen"
+        },
+        "fii_dii_bar": {
+          "type": "dual_bar_chart",
+          "data": "Last 10 days FII + DII net flow",
+          "color": "FII=blue, DII=orange"
+        }
+      }
+    },
+    "3_live_scanner": {
+      "name": "Live Market Scanner",
+      "description": "Real-time scanning of Nifty 100 + Nifty 200 + US stocks during market hours",
+      "controls": {
+        "market_select": [
+          "Indian NSE",
+          "Indian BSE",
+          "US NYSE",
+          "US Nasdaq",
+          "Both India + US"
+        ],
+        "universe_select": [
+          "Nifty 50",
+          "Nifty 100",
+          "Nifty 200",
+          "Midcap 100",
+          "S&P 500",
+          "Nasdaq 100",
+          "Custom watchlist"
+        ],
+        "scan_mode": [
+          "Top Breakouts",
+          "Golden Cross",
+          "RSI Sweet Spot",
+          "Bull Flag",
+          "Cup & Handle",
+          "High Volume Surge",
+          "Near 52W High",
+          "All Patterns"
+        ],
+        "filters": {
+          "min_rr_ratio": {
+            "type": "slider",
+            "min": 1.0,
+            "max": 5.0,
+            "default": 2.0,
+            "step": 0.1
+          },
+          "min_score": {
+            "type": "slider",
+            "min": 5.0,
+            "max": 10.0,
+            "default": 7.0,
+            "step": 0.5
+          },
+          "min_volume_ratio": {
+            "type": "slider",
+            "min": 0.5,
+            "max": 5.0,
+            "default": 1.2,
+            "step": 0.1
+          },
+          "rsi_range": {
+            "type": "range_slider",
+            "min": 20,
+            "max": 85,
+            "default": [
+              40,
+              70
+            ]
+          },
+          "market_cap": [
+            "All",
+            "Large Cap (>20,000 Cr)",
+            "Mid Cap (5,000-20,000 Cr)",
+            "Small Cap (<5,000 Cr)"
+          ],
+          "sector": "Multi-select dropdown"
+        },
+        "auto_scan": {
+          "enabled": true,
+          "interval_minutes": 15,
+          "market_hours_only": false
+        },
+        "scan_button": "Manual trigger scan"
+      },
+      "results_table": {
+        "columns": [
+          "#",
+          "Ticker",
+          "Company",
+          "Sector",
+          "Exchange",
+          "CMP",
+          "Change%",
+          "Score",
+          "Tier",
+          "Pattern",
+          "RSI",
+          "MACD",
+          "EMA Align",
+          "Vol Ratio",
+          "Buy Zone",
+          "T1",
+          "T2",
+          "SL",
+          "R:R",
+          "Phase",
+          "Action"
+        ],
+        "sortable": true,
+        "filterable": true,
+        "row_click": "Opens full stock analysis panel",
+        "bulk_actions": [
+          "Add to Watchlist",
+          "Set Alert",
+          "Add to Portfolio",
+          "Export Selected"
+        ]
+      }
+    },
+    "4_stock_analysis": {
+      "name": "Stock Deep Analysis",
+      "layout": "Split: Chart (left 60%) + Analysis Panel (right 40%)",
+      "chart_panel": {
+        "type": "Interactive OHLCV candlestick chart",
+        "library": "Plotly (interactive) with mplfinance fallback",
+        "timeframes": [
+          "1D",
+          "1W",
+          "1M",
+          "3M",
+          "6M",
+          "1Y",
+          "All"
+        ],
+        "candle_types": [
+          "Candlestick",
+          "Heikin Ashi",
+          "Line",
+          "Area"
+        ],
+        "overlay_indicators": {
+          "moving_averages": [
+            "EMA9",
+            "EMA20",
+            "EMA50",
+            "EMA200"
+          ],
+          "bollinger_bands": true,
+          "vwap": true,
+          "fibonacci_levels": true,
+          "pivot_points": true,
+          "support_resistance_auto": true
+        },
+        "sub_charts": {
+          "volume": {
+            "position": "below_main",
+            "shows": [
+              "volume bars",
+              "20MA volume",
+              "volume ratio color coding"
+            ]
+          },
+          "rsi": {
+            "position": "below_volume",
+            "shows": [
+              "RSI line",
+              "30/50/70 levels",
+              "divergence markers"
+            ]
+          },
+          "macd": {
+            "position": "below_rsi",
+            "shows": [
+              "MACD line",
+              "Signal line",
+              "Histogram"
+            ]
+          },
+          "obv": {
+            "optional": true,
+            "toggle": true
+          }
+        },
+        "drawing_tools": [
+          "Horizontal line",
+          "Trendline",
+          "Rectangle",
+          "Fibonacci retracement",
+          "Text annotation"
+        ],
+        "auto_pattern_overlay": {
+          "enabled": true,
+          "draws": "Automatically marks detected patterns on chart with colored regions"
+        }
+      },
+      "analysis_panel": {
+        "tabs": [
+          "AI Prediction",
+          "Trade Setup",
+          "Technicals",
+          "Fundamentals",
+          "News",
+          "Similar Stocks"
+        ],
+        "ai_prediction_tab": {
+          "components": [
+            "Price prediction direction badge (BULLISH/BEARISH/NEUTRAL) with confidence %",
+            "7-day price range forecast (high-low band)",
+            "Key support levels (auto-detected)",
+            "Key resistance levels (auto-detected)",
+            "Pattern probability score",
+            "AI narrative: 3-5 sentence trade thesis",
+            "Risk factors list"
+          ]
+        },
+        "trade_setup_tab": {
+          "components": [
+            "Entry Zone (₹X – ₹Y) with logic tooltip",
+            "Target 1 (₹T1, +%) with logic",
+            "Target 2 (₹T2, +%) with logic",
+            "Stop Loss (₹SL, -%) with logic",
+            "R:R ratio visual (color coded)",
+            "Holding period estimate",
+            "Phase deployment breakdown",
+            "Position size calculator (input capital → output shares + amount)",
+            "Export trade card as PDF button"
+          ]
+        },
+        "technicals_tab": {
+          "indicator_cards": {
+            "each_card_shows": [
+              "Indicator name",
+              "Current value",
+              "Signal (BULLISH/BEARISH/NEUTRAL)",
+              "Entry rule triggered?",
+              "Exit rule triggered?",
+              "Score contribution"
+            ],
+            "indicators": [
+              "EMA Alignment",
+              "RSI",
+              "MACD",
+              "Bollinger Bands",
+              "ATR",
+              "Volume Ratio",
+              "OBV",
+              "Stochastic",
+              "Golden/Death Cross",
+              "Delivery %"
+            ]
+          }
+        },
+        "fundamentals_tab": {
+          "shows": [
+            "P/E ratio vs sector avg",
+            "Market Cap",
+            "52W High/Low",
+            "Revenue growth %",
+            "Net Profit growth %",
+            "D/E ratio",
+            "Promoter holding %",
+            "FII holding %",
+            "Dividend yield",
+            "SEBI flag status"
+          ]
+        },
+        "news_tab": {
+          "shows": "Latest 20 news items for this ticker with sentiment badge and source link"
+        }
+      }
+    },
+    "5_watchlist": {
+      "name": "Watchlist",
+      "features": [
+        "Add stock",
+        "Remove stock",
+        "Set price alerts",
+        "Sort by score/change/RSI",
+        "Mini chart sparkline per row",
+        "Bulk alert set",
+        "Multiple watchlists (named groups)"
+      ]
+    },
+    "6_portfolio": {
+      "name": "Portfolio Tracker",
+      "features": [
+        "Add holdings (ticker, quantity, buy price, date)",
+        "Live P&L calculation",
+        "Sector allocation pie chart",
+        "Trade history table",
+        "Performance chart (portfolio value over time)",
+        "Phase tracking (which phase each holding is in)",
+        "Export to CSV/Excel"
+      ]
+    },
+    "7_alerts_manager": {
+      "name": "Alerts Manager",
+      "features": [
+        "View all active alerts",
+        "Create new alert (price/indicator/pattern/news trigger)",
+        "Edit/Delete alerts",
+        "Alert history log",
+        "Test notification channels button",
+        "Alert templates (one-click create for T1/T2/SL alerts)"
+      ]
+    },
+    "8_news_feed": {
+      "name": "News Intelligence Feed",
+      "sources": [
+        "Moneycontrol RSS",
+        "Economic Times Markets",
+        "Business Standard",
+        "LiveMint",
+        "Reuters India",
+        "Yahoo Finance (US)",
+        "CNBC",
+        "Bloomberg (free tier)"
+      ],
+      "features": [
+        "Real-time news aggregation",
+        "Sentiment analysis (BULLISH/BEARISH/NEUTRAL badge per article)",
+        "Ticker extraction (which stocks are mentioned)",
+        "Filter by sector or ticker",
+        "Breaking news popup",
+        "Market-moving news priority flag"
+      ]
+    },
+    "9_settings": {
+      "sections": [
+        "Account & Security",
+        "Data Sources & API Keys",
+        "Notification Settings",
+        "Scan Preferences",
+        "Display & Theme",
+        "Backup & Restore",
+        "About"
+      ],
+      "name": "Settings",
+      "title": "Settings & Configuration"
+    }
+  },
+  "ui_theme": {
+    "dark_pro": {
+      "background_main": "#0A0E1A",
+      "background_surface": "#12182B",
+      "background_card": "#1A2035",
+      "border": "#2A3050",
+      "accent_primary": "#00D4FF",
+      "bullish": "#00E676",
+      "bearish": "#FF5252",
+      "warning": "#FFB300",
+      "text_primary": "#FFFFFF",
+      "text_secondary": "#8892A4",
+      "font": "Inter (primary) | JetBrains Mono (numbers/prices)",
+      "animations": "200ms fade transitions; card hover scale 1.02; number ticker on price update; slide-in alert popup",
+      "components": "Cards with 12px border-radius; gradient borders on hover; sticky table headers; dark chart backgrounds"
+    }
+  },
+  "technical_indicators": {
+    "EMA": {
+      "description": "Exponential Moving Average",
+      "periods": [
+        9,
+        20,
+        50,
+        200
+      ],
+      "formula": "EMA(t) = Close(t) * k + EMA(t-1) * (1-k) where k = 2/(period+1)",
+      "k_values": {
+        "EMA9": 0.2,
+        "EMA20": 0.0952,
+        "EMA50": 0.0385,
+        "EMA200": 0.00995
+      },
+      "library_call": "pandas_ta.ema(df['Close'], length=N)",
+      "signals": {
+        "GOLDEN_CROSS": {
+          "condition": "EMA50 > EMA200 AND (yesterday EMA50 <= EMA200)",
+          "signal": "BULLISH",
+          "strength": "VERY_STRONG",
+          "score": 2.0
+        },
+        "DEATH_CROSS": {
+          "condition": "EMA50 < EMA200 AND (yesterday EMA50 >= EMA200)",
+          "signal": "BEARISH",
+          "strength": "VERY_STRONG",
+          "score": -3.0
+        },
+        "PRICE_ABOVE_EMA20": {
+          "condition": "Close > EMA20",
+          "signal": "BULLISH",
+          "score": 1.0
+        },
+        "PRICE_ABOVE_EMA50": {
+          "condition": "Close > EMA50",
+          "signal": "BULLISH",
+          "score": 1.5
+        },
+        "PRICE_ABOVE_EMA200": {
+          "condition": "Close > EMA200",
+          "signal": "BULLISH",
+          "score": 1.5
+        },
+        "PRICE_BELOW_EMA20": {
+          "condition": "Close < EMA20",
+          "signal": "BEARISH",
+          "score": -1.0
+        },
+        "PRICE_BELOW_EMA50": {
+          "condition": "Close < EMA50",
+          "signal": "BEARISH",
+          "score": -2.0
+        },
+        "PRICE_BELOW_EMA200": {
+          "condition": "Close < EMA200",
+          "signal": "BEARISH",
+          "score": -2.0
+        }
+      },
+      "entry_rules": {
+        "RULE_EMA_E1": {
+          "name": "Golden Cross Entry",
+          "condition": "EMA50 crosses ABOVE EMA200 (fresh within last 5 days)",
+          "action": "BUY at market open or at EMA20 on pullback",
+          "confirmation_needed": "Volume > 1.2x average on crossover day"
+        },
+        "RULE_EMA_E2": {
+          "name": "EMA20 Bounce Entry (Pullback Buy)",
+          "condition": "Price pulls back to EMA20 in an uptrend (all EMAs aligned bullish)",
+          "action": "BUY when daily candle closes above EMA20 after touching it",
+          "confirmation_needed": "RSI > 45 AND MACD histogram positive"
+        },
+        "RULE_EMA_E3": {
+          "name": "EMA50 Support Entry",
+          "condition": "Price bounces from EMA50 with a bullish candle",
+          "action": "BUY on close above EMA50 bounce candle high",
+          "confirmation_needed": "Volume > 1.3x average"
+        },
+        "RULE_EMA_E4": {
+          "name": "Perfect Alignment Entry",
+          "condition": "Price > EMA9 > EMA20 > EMA50 > EMA200 (all 5 stacked bullish)",
+          "action": "BUY immediately — highest conviction entry",
+          "confirmation_needed": "Any confirming signal (volume/RSI/MACD)"
+        }
+      },
+      "exit_rules": {
+        "RULE_EMA_X1": {
+          "name": "EMA20 Breakdown Exit",
+          "condition": "Close < EMA20 for 2 consecutive days",
+          "action": "EXIT 50% of position — trend weakening"
+        },
+        "RULE_EMA_X2": {
+          "name": "EMA50 Breakdown Exit",
+          "condition": "Close < EMA50 on daily basis",
+          "action": "EXIT 100% — stop loss confirmed"
+        },
+        "RULE_EMA_X3": {
+          "name": "Death Cross Exit",
+          "condition": "EMA50 crosses BELOW EMA200",
+          "action": "EXIT 100% IMMEDIATELY — structural bear signal"
+        },
+        "RULE_EMA_X4": {
+          "name": "EMA200 Breakdown Exit",
+          "condition": "Close < EMA200",
+          "action": "EXIT ALL immediately — long-term downtrend confirmed"
+        }
+      },
+      "name": "Exponential Moving Average"
+    },
+    "RSI": {
+      "description": "Relative Strength Index",
+      "period": 14,
+      "formula": "RSI = 100 - (100 / (1 + RS)); RS = AvgGain / AvgLoss over N periods",
+      "library_call": "pandas_ta.rsi(df['Close'], length=14)",
+      "zones": {
+        "extreme_oversold": {
+          "range": [
+            0,
+            25
+          ],
+          "label": "Extreme Oversold",
+          "color": "#00E676"
+        },
+        "oversold": {
+          "range": [
+            25,
+            35
+          ],
+          "label": "Oversold",
+          "color": "#69F0AE"
+        },
+        "recovering": {
+          "range": [
+            35,
+            45
+          ],
+          "label": "Recovering",
+          "color": "#FFEB3B"
+        },
+        "sweet_spot": {
+          "range": [
+            45,
+            65
+          ],
+          "label": "Sweet Spot — Best Entry",
+          "color": "#00D4FF"
+        },
+        "strong": {
+          "range": [
+            65,
+            70
+          ],
+          "label": "Strong Momentum",
+          "color": "#FF9800"
+        },
+        "extended": {
+          "range": [
+            70,
+            78
+          ],
+          "label": "Extended — Caution",
+          "color": "#FF5722"
+        },
+        "overbought": {
+          "range": [
+            78,
+            100
+          ],
+          "label": "Overbought — Avoid",
+          "color": "#FF5252"
+        }
+      },
+      "entry_rules": {
+        "RULE_RSI_E1": {
+          "name": "RSI Sweet Spot Entry",
+          "condition": "RSI(14) between 45 and 65",
+          "action": "BUY — ideal entry zone with maximum upside before overbought",
+          "score_bonus": 2.0
+        },
+        "RULE_RSI_E2": {
+          "name": "RSI Oversold Reversal Entry",
+          "condition": "RSI drops below 30 then turns back UP above 30",
+          "action": "BUY on RSI cross above 30 with confirming bullish candle",
+          "confirmation_needed": "Bullish engulfing or hammer candle + volume spike"
+        },
+        "RULE_RSI_E3": {
+          "name": "RSI Bullish Divergence Entry",
+          "condition": "Price makes LOWER LOW but RSI makes HIGHER LOW",
+          "action": "BUY — strong reversal signal; price decline is weakening",
+          "confirmation_needed": "Confirmed by MACD or EMA signal"
+        },
+        "RULE_RSI_E4": {
+          "name": "RSI Midline (50) Bounce Entry",
+          "condition": "RSI bounces from 50 level in an uptrend (RSI touched 45-50 then reversed up)",
+          "action": "BUY — pullback in uptrend ended; momentum resuming"
+        }
+      },
+      "exit_rules": {
+        "RULE_RSI_X1": {
+          "name": "RSI Overbought Exit",
+          "condition": "RSI crosses ABOVE 75",
+          "action": "EXIT 50% of position; raise trailing stop on remainder"
+        },
+        "RULE_RSI_X2": {
+          "name": "RSI Extreme Overbought Exit",
+          "condition": "RSI crosses ABOVE 80",
+          "action": "EXIT 100% — unsustainable; sharp reversal likely"
+        },
+        "RULE_RSI_X3": {
+          "name": "RSI Bearish Divergence Exit",
+          "condition": "Price makes HIGHER HIGH but RSI makes LOWER HIGH",
+          "action": "EXIT 100% — momentum failing; reversal imminent"
+        },
+        "RULE_RSI_X4": {
+          "name": "RSI Support Break Exit",
+          "condition": "RSI drops below 40 after being above 50 (trend weakening)",
+          "action": "EXIT 50%; tighten stop on remainder"
+        }
+      },
+      "name": "Relative Strength Index"
+    },
+    "MACD": {
+      "description": "Moving Average Convergence Divergence",
+      "parameters": {
+        "fast": 12,
+        "slow": 26,
+        "signal": 9
+      },
+      "formula": {
+        "MACD_line": "EMA(12) - EMA(26)",
+        "Signal_line": "EMA(9) of MACD_line",
+        "Histogram": "MACD_line - Signal_line"
+      },
+      "library_call": "pandas_ta.macd(df['Close'], fast=12, slow=26, signal=9)",
+      "entry_rules": {
+        "RULE_MACD_E1": {
+          "name": "MACD Bullish Crossover Entry",
+          "condition": "MACD line crosses ABOVE Signal line (fresh — within last 2 days)",
+          "action": "BUY — strongest momentum entry signal",
+          "score_bonus": 2.0,
+          "confirmation_needed": "Volume > 1.2x average"
+        },
+        "RULE_MACD_E2": {
+          "name": "MACD Zero Line Crossover Entry",
+          "condition": "MACD line crosses ABOVE 0 (both MACD and Signal become positive)",
+          "action": "BUY — confirms trend turning positive after downtrend"
+        },
+        "RULE_MACD_E3": {
+          "name": "MACD Histogram Momentum Entry",
+          "condition": "Histogram is positive AND increasing for 3+ consecutive days",
+          "action": "BUY — momentum accelerating; trend strengthening"
+        },
+        "RULE_MACD_E4": {
+          "name": "MACD Bullish Divergence Entry",
+          "condition": "Price makes LOWER LOW but MACD histogram makes HIGHER LOW",
+          "action": "BUY — selling pressure weakening; reversal building"
+        }
+      },
+      "exit_rules": {
+        "RULE_MACD_X1": {
+          "name": "MACD Bearish Crossover Exit",
+          "condition": "MACD line crosses BELOW Signal line",
+          "action": "EXIT 50% if profitable; EXIT 100% if at stop loss"
+        },
+        "RULE_MACD_X2": {
+          "name": "MACD Zero Line Breakdown Exit",
+          "condition": "MACD line crosses BELOW 0",
+          "action": "EXIT 100% — momentum fully reversed to bearish"
+        },
+        "RULE_MACD_X3": {
+          "name": "MACD Histogram Deceleration Exit",
+          "condition": "Histogram is positive but DECLINING for 3+ consecutive days (peak formed)",
+          "action": "EXIT 25-50%; raise trailing stop — momentum fading"
+        },
+        "RULE_MACD_X4": {
+          "name": "MACD Bearish Divergence Exit",
+          "condition": "Price makes HIGHER HIGH but MACD makes LOWER HIGH",
+          "action": "EXIT 100% — uptrend losing steam; reversal signal"
+        }
+      },
+      "name": "MACD (Moving Average Convergence Divergence)"
+    },
+    "ATR": {
+      "description": "Average True Range — used for position sizing, entry zones, and stop loss",
+      "period": 14,
+      "formula": {
+        "TrueRange": "MAX(High-Low, |High-PrevClose|, |Low-PrevClose|)",
+        "ATR": "Wilder EMA(14) of TrueRange"
+      },
+      "library_call": "pandas_ta.atr(df['High'], df['Low'], df['Close'], length=14)",
+      "usage_in_trade": {
+        "entry_zone_half_width": "0.5 * ATR14",
+        "stop_loss_distance": "1.5 * ATR14",
+        "target1_distance": "2.25 * ATR14",
+        "target2_distance": "4.5 * ATR14",
+        "position_size_formula": "Risk_Capital / (1.5 * ATR14)"
+      },
+      "entry_rules": {
+        "RULE_ATR_E1": {
+          "name": "ATR Contraction Entry",
+          "condition": "ATR(14) is at its lowest level in 20 days (volatility compression)",
+          "action": "BUY on breakout above recent high — low ATR precedes explosive moves"
+        },
+        "RULE_ATR_E2": {
+          "name": "ATR Entry Zone",
+          "condition": "Price is within Entry_Zone = [Trigger - 0.5*ATR, Trigger + 0.5*ATR]",
+          "action": "BUY if price enters the entry zone — avoid buying outside this band"
+        }
+      },
+      "exit_rules": {
+        "RULE_ATR_X1": {
+          "name": "ATR Trailing Stop",
+          "condition": "After entry: Trailing SL = Highest Close since entry - 2.0 * ATR",
+          "action": "EXIT when price closes below trailing stop level"
+        },
+        "RULE_ATR_X2": {
+          "name": "ATR Expansion Exit",
+          "condition": "ATR doubles from entry ATR value (extreme volatility event)",
+          "action": "EXIT 50% — abnormal volatility = risk event; protect capital"
+        }
+      },
+      "name": "Average True Range"
+    },
+    "BOLLINGER_BANDS": {
+      "description": "Bollinger Bands — volatility + overbought/oversold",
+      "parameters": {
+        "period": 20,
+        "std_dev": 2.0
+      },
+      "formula": {
+        "Middle_Band": "SMA(20) of Close",
+        "Upper_Band": "Middle + (2 * StdDev(Close, 20))",
+        "Lower_Band": "Middle - (2 * StdDev(Close, 20))",
+        "Band_Width": "(Upper - Lower) / Middle * 100"
+      },
+      "library_call": "pandas_ta.bbands(df['Close'], length=20, std=2)",
+      "entry_rules": {
+        "RULE_BB_E1": {
+          "name": "Bollinger Squeeze Breakout Entry",
+          "condition": "BandWidth < 10% (squeeze) AND price breaks above Upper Band with volume > 1.5x",
+          "action": "BUY on the breakout candle close — explosive move imminent"
+        },
+        "RULE_BB_E2": {
+          "name": "Lower Band Bounce Entry",
+          "condition": "Price touches Lower Band AND RSI < 40 AND bullish reversal candle forms",
+          "action": "BUY — mean reversion trade; target Middle Band (minimum)"
+        },
+        "RULE_BB_E3": {
+          "name": "Middle Band Reclaim Entry",
+          "condition": "Price was below Middle Band, now closes ABOVE Middle Band",
+          "action": "BUY — momentum shifting from bearish to bullish"
+        }
+      },
+      "exit_rules": {
+        "RULE_BB_X1": {
+          "name": "Upper Band Exit (Overbought)",
+          "condition": "Price closes ABOVE Upper Band for 2+ consecutive days",
+          "action": "EXIT 50% — price stretched beyond statistical norm; profit book"
+        },
+        "RULE_BB_X2": {
+          "name": "Middle Band Breakdown Exit",
+          "condition": "Price breaks BELOW Middle Band after being above it",
+          "action": "EXIT 50% — upward momentum paused; tighten stop"
+        },
+        "RULE_BB_X3": {
+          "name": "Lower Band Touch Exit (Long positions only)",
+          "condition": "Price touches Lower Band from above (not a bounce — a break)",
+          "action": "EXIT 100% — strong downward pressure confirmed"
+        }
+      },
+      "name": "Bollinger Bands"
+    },
+    "OBV": {
+      "description": "On-Balance Volume — confirms price trend with volume",
+      "formula": "OBV(t) = OBV(t-1) + Volume if Close > PrevClose, else OBV(t-1) - Volume",
+      "library_call": "pandas_ta.obv(df['Close'], df['Volume'])",
+      "entry_rules": {
+        "RULE_OBV_E1": {
+          "name": "OBV Accumulation Entry",
+          "condition": "OBV making new highs while price is still in consolidation",
+          "action": "BUY early — smart money accumulating before price breakout"
+        },
+        "RULE_OBV_E2": {
+          "name": "OBV Bullish Divergence Entry",
+          "condition": "Price makes lower low but OBV makes higher low (buying on dips)",
+          "action": "BUY — institutional buying is absorbing the selling"
+        },
+        "RULE_OBV_E3": {
+          "name": "OBV Trend Confirmation Entry",
+          "condition": "OBV 20-day moving average is rising AND price breaks resistance",
+          "action": "BUY with higher conviction — volume confirms the breakout"
+        }
+      },
+      "exit_rules": {
+        "RULE_OBV_X1": {
+          "name": "OBV Divergence Exit",
+          "condition": "Price makes higher high but OBV makes lower high (volume drying up)",
+          "action": "EXIT 50–100% — institutional selling into price rise; top forming"
+        },
+        "RULE_OBV_X2": {
+          "name": "OBV Trend Break Exit",
+          "condition": "OBV 20-day moving average turns DOWN after being UP",
+          "action": "EXIT 50% and tighten stop — accumulation phase ending"
+        }
+      },
+      "name": "On-Balance Volume"
+    },
+    "VOLUME_RATIO": {
+      "description": "Volume relative to 20-day average — identifies institutional activity",
+      "formula": "Volume_Ratio = Today_Volume / Rolling_Mean(Volume, 20)",
+      "library_call": "df['Vol_MA20'] = df['Volume'].rolling(20).mean(); df['Vol_Ratio'] = df['Volume'] / df['Vol_MA20']",
+      "tiers": {
+        "very_low": {
+          "range": [
+            0,
+            0.5
+          ],
+          "label": "Very Thin",
+          "color": "#607D8B"
+        },
+        "below_avg": {
+          "range": [
+            0.5,
+            0.8
+          ],
+          "label": "Below Average",
+          "color": "#9E9E9E"
+        },
+        "normal": {
+          "range": [
+            0.8,
+            1.2
+          ],
+          "label": "Normal",
+          "color": "#FFFFFF"
+        },
+        "above_avg": {
+          "range": [
+            1.2,
+            1.5
+          ],
+          "label": "Above Average",
+          "color": "#FFB300"
+        },
+        "high": {
+          "range": [
+            1.5,
+            2.5
+          ],
+          "label": "High — Institutional",
+          "color": "#00E676"
+        },
+        "very_high": {
+          "range": [
+            2.5,
+            4.0
+          ],
+          "label": "Very High — Smart Money",
+          "color": "#00D4FF"
+        },
+        "climax": {
+          "range": [
+            4.0,
+            99
+          ],
+          "label": "Climax Volume",
+          "color": "#FF5252"
+        }
+      },
+      "entry_rules": {
+        "RULE_VOL_E1": {
+          "name": "Volume Spike Breakout Entry",
+          "condition": "Volume_Ratio > 1.5 AND price breaks above resistance on same candle",
+          "action": "BUY — valid breakout confirmed by institutional participation"
+        },
+        "RULE_VOL_E2": {
+          "name": "Accumulation Pattern Entry",
+          "condition": "3+ consecutive up days with increasing volume (each day volume > prior day)",
+          "action": "BUY — systematic institutional accumulation in progress"
+        },
+        "RULE_VOL_E3": {
+          "name": "Volume Dip Entry",
+          "condition": "Pullback days show Volume_Ratio < 0.8 (low volume = no selling pressure)",
+          "action": "BUY the dip — healthy pullback with no distribution"
+        }
+      },
+      "exit_rules": {
+        "RULE_VOL_X1": {
+          "name": "Climax Volume Exit",
+          "condition": "Volume_Ratio > 4.0 AND price is at or near highs (exhaustion)",
+          "action": "EXIT 50–100% — climax selling; top likely forming"
+        },
+        "RULE_VOL_X2": {
+          "name": "Distribution Exit",
+          "condition": "Price rising but Volume declining for 3+ days (price up, volume down)",
+          "action": "EXIT 50% — weak rally; institutions distributing positions"
+        }
+      },
+      "name": "Volume Ratio"
+    },
+    "STOCHASTIC": {
+      "description": "Stochastic Oscillator — momentum and overbought/oversold",
+      "parameters": {
+        "k_period": 14,
+        "d_period": 3
+      },
+      "formula": {
+        "pct_K": "(Close - Lowest_Low(14)) / (Highest_High(14) - Lowest_Low(14)) * 100",
+        "pct_D": "3-day SMA of %K"
+      },
+      "library_call": "pandas_ta.stoch(df['High'], df['Low'], df['Close'], k=14, d=3)",
+      "entry_rules": {
+        "RULE_STOCH_E1": {
+          "name": "Stochastic Oversold Cross Entry",
+          "condition": "%K crosses ABOVE %D while both are below 20",
+          "action": "BUY — oversold reversal signal; strong reversal entry"
+        },
+        "RULE_STOCH_E2": {
+          "name": "Stochastic Bullish Divergence Entry",
+          "condition": "Price makes lower low but %K makes higher low while below 30",
+          "action": "BUY — selling exhausted despite price decline"
+        }
+      },
+      "exit_rules": {
+        "RULE_STOCH_X1": {
+          "name": "Stochastic Overbought Cross Exit",
+          "condition": "%K crosses BELOW %D while both are above 80",
+          "action": "EXIT 50–100% — momentum exhausted at highs"
+        },
+        "RULE_STOCH_X2": {
+          "name": "Stochastic Bearish Divergence Exit",
+          "condition": "Price makes higher high but %K makes lower high above 80",
+          "action": "EXIT — overbought with diminishing momentum"
+        }
+      },
+      "name": "Stochastic Oscillator"
+    },
+    "FIBONACCI": {
+      "description": "Fibonacci Retracement — identifies support zones for pullback entries",
+      "levels": [
+        0.0,
+        0.236,
+        0.382,
+        0.5,
+        0.618,
+        0.786,
+        1.0
+      ],
+      "calculation": {
+        "swing_high": "Highest high over lookback period (default 50 days)",
+        "swing_low": "Lowest low over lookback period (default 50 days)",
+        "level_price": "Swing_High - (Swing_High - Swing_Low) * Fibonacci_Level"
+      },
+      "entry_rules": {
+        "RULE_FIB_E1": {
+          "name": "38.2% Fibonacci Bounce Entry",
+          "condition": "Price pulls back to 38.2% level in strong uptrend AND bounces with bullish candle",
+          "action": "BUY — shallow pullback in strong trend; momentum likely to resume"
+        },
+        "RULE_FIB_E2": {
+          "name": "50% Fibonacci Bounce Entry",
+          "condition": "Price pulls back to 50% level with RSI in 40–55 range",
+          "action": "BUY — standard pullback; good R:R from this level"
+        },
+        "RULE_FIB_E3": {
+          "name": "61.8% Golden Ratio Entry",
+          "condition": "Price at 61.8% level with bullish divergence or reversal candle",
+          "action": "BUY with tight stop below 61.8% — last support before new low"
+        }
+      },
+      "exit_rules": {
+        "RULE_FIB_X1": {
+          "name": "Fibonacci Level Failure Exit",
+          "condition": "Price breaks BELOW 61.8% Fibonacci level on closing basis",
+          "action": "EXIT 100% — support structure broken; deeper decline likely"
+        },
+        "RULE_FIB_X2": {
+          "name": "Fibonacci Extension Target Exit",
+          "condition": "Price reaches 127.2% or 161.8% Fibonacci extension (above prior high)",
+          "action": "EXIT 50% at 127.2% and 50% at 161.8% — measured extension targets"
+        }
+      },
+      "name": "Fibonacci Retracement"
+    },
+    "GOLDEN_CROSS_DEATH_CROSS": {
+      "description": "Most powerful institutional trend-change signals",
+      "golden_cross": {
+        "condition": "50-day EMA crosses ABOVE 200-day EMA",
+        "meaning": "Long-term institutional trend turning BULLISH",
+        "historical_accuracy": "73% win rate in Indian markets (NSE historical data)",
+        "score": 2.0
+      },
+      "death_cross": {
+        "condition": "50-day EMA crosses BELOW 200-day EMA",
+        "meaning": "Long-term institutional trend turning BEARISH",
+        "score": -3.0
+      },
+      "entry_rules": {
+        "RULE_GC_E1": {
+          "name": "Fresh Golden Cross Entry",
+          "condition": "Golden Cross fired within last 5 trading days",
+          "action": "BUY on next EMA20 pullback — early institutional trend entry",
+          "note": "Strongest single entry signal in this system"
+        },
+        "RULE_GC_E2": {
+          "name": "Golden Cross Continuation Entry",
+          "condition": "Golden Cross is active (>5 days) AND price pulls back to EMA50",
+          "action": "BUY at EMA50 bounce — trend still intact, better entry"
+        }
+      },
+      "exit_rules": {
+        "RULE_GC_X1": {
+          "name": "Death Cross Emergency Exit",
+          "condition": "Death Cross confirmed (EMA50 crosses below EMA200)",
+          "action": "EXIT ALL positions in this stock IMMEDIATELY"
+        }
+      },
+      "name": "Golden Cross / Death Cross"
+    },
+    "ADX": {
+      "description": "Average Directional Index — trend STRENGTH (0-100 scale)",
+      "period": 14,
+      "formula": "ADX = EMA(14) of |DI_plus - DI_minus| / (DI_plus + DI_minus) * 100",
+      "library_call": "pandas_ta.adx(df['High'], df['Low'], df['Close'], length=14)",
+      "zones": {
+        "0-20": "No trend",
+        "20-25": "Weak trend forming",
+        "25-40": "Strong trend",
+        "40-60": "Very strong",
+        "60+": "Extreme — near exhaustion"
+      },
+      "entry_rules": {
+        "E1": "ADX crosses above 25 while DI+ > DI- → Strong bullish trend → BUY",
+        "E2": "ADX > 25 AND rising for 3+ days → Trend accelerating → BUY/ADD",
+        "E3": "ADX recovers above 20 after dip below 20 → New trend starting → BUY"
+      },
+      "exit_rules": {
+        "X1": "ADX > 50 and turning down → Trend exhausting → EXIT 50%",
+        "X2": "DI- crosses above DI+ while ADX > 25 → Trend reversed → EXIT 100%",
+        "X3": "ADX falls below 20 → Trend lost → EXIT"
+      },
+      "score_contribution": 0.5,
+      "name": "Average Directional Index"
+    },
+    "SUPERTREND": {
+      "description": "Supertrend — clearest buy/sell signal indicator",
+      "parameters": {
+        "period": 10,
+        "multiplier": 3.0
+      },
+      "formula": "Flips between (HL/2 ± Multiplier*ATR) — bullish when close above supertrend line",
+      "library_call": "pandas_ta.supertrend(df['High'], df['Low'], df['Close'], length=10, multiplier=3)",
+      "entry_rules": {
+        "E1": "Supertrend flips from SELL to BUY → STRONG BUY — highest conviction flip",
+        "E2": "Price pulls back to Supertrend support line without flipping → BUY dip",
+        "E3": "Supertrend BUY + ADX > 25 → Best combination — very high conviction"
+      },
+      "exit_rules": {
+        "X1": "Supertrend flips from BUY to SELL → EXIT 100% IMMEDIATELY — no delay",
+        "X2": "Price touches Supertrend line 3rd time without bouncing → EXIT 50%"
+      },
+      "score_contribution": 1.0,
+      "name": "SuperTrend Indicator"
+    },
+    "VWAP": {
+      "description": "Volume Weighted Average Price — intraday institutional reference",
+      "formula": "VWAP = Cumulative(TP * Volume) / Cumulative(Volume); TP = (H+L+C)/3",
+      "library_call": "pandas_ta.vwap(df['High'], df['Low'], df['Close'], df['Volume'])",
+      "entry_rules": {
+        "E1": "Price bounces from VWAP on above-avg volume → BUY (intraday/swing)",
+        "E2": "Price crosses ABOVE VWAP in morning session → BUY institutional momentum",
+        "E3": "Price retests VWAP twice as support without breaking → BUY double support"
+      },
+      "exit_rules": {
+        "X1": "Price breaks below VWAP in last hour of session → EXIT intraday",
+        "X2": "Price >2% above VWAP at session end → Consider partial exit (stretched)"
+      },
+      "score_contribution": 0.5,
+      "name": "Volume Weighted Average Price"
+    },
+    "PARABOLIC_SAR": {
+      "description": "Parabolic SAR — trailing stop and trend direction indicator",
+      "formula": "SAR = SAR_prev + AF*(EP - SAR_prev); AF from 0.02 to 0.20",
+      "library_call": "pandas_ta.psar(df['High'], df['Low'], df['Close'])",
+      "entry_rules": {
+        "E1": "SAR flips BELOW price (from above to below) → BUY — uptrend confirmed",
+        "E2": "SAR below price AND dots far from price → Strong uptrend → ADD position"
+      },
+      "exit_rules": {
+        "X1": "SAR flips ABOVE price → EXIT 100% — trend reversed",
+        "X2": "SAR dots rapidly approaching price (acceleration) → EXIT 50% — trend ending"
+      },
+      "trailing_stop_use": "Set trailing SL = current SAR value (auto-updates each day)",
+      "score_contribution": 0.5,
+      "name": "Parabolic SAR"
+    },
+    "RELATIVE_STRENGTH_VS_NIFTY": {
+      "description": "Stock performance vs Nifty 50 over 20 days (NOT the RSI indicator)",
+      "formula": "RS_Ratio = Stock_20d_return / Nifty_20d_return",
+      "entry_rules": {
+        "E1": "RS_Ratio > 1.2 → Stock outperforming Nifty → BUY (Mark Minervini SEPA rule)",
+        "E2": "RS_Ratio rising over last 10 days → Momentum building → BUY"
+      },
+      "exit_rules": {
+        "X1": "RS_Ratio falls below 0.85 for 5+ days → Underperforming → EXIT",
+        "X2": "RS_Ratio trending down for 10 days → Sector rotation away → EXIT 50%"
+      },
+      "score_contribution": 0.5,
+      "name": "Relative Strength vs Nifty"
+    }
+  },
+  "chart_patterns": {
+    "DOUBLE_BOTTOM": {
+      "type": "BULLISH_REVERSAL",
+      "timeframe": "Daily",
+      "identification": {
+        "step1": "Find two price lows within 2% of each other",
+        "step2": "Valley between them (neckline) must be at least 5% above lows",
+        "step3": "Second low ideally on lower volume than first",
+        "step4": "CONFIRM: Price closes ABOVE neckline with Volume > 1.5x avg"
+      },
+      "entry": "Close above neckline",
+      "target": "Neckline + (Neckline - Bottom)",
+      "stop_loss": "Below second bottom",
+      "score_bonus": 1.5,
+      "code_logic": "Find 2 local minima within 2% of each other with intervening maximum (neckline) 5%+ higher"
+    },
+    "BULL_FLAG": {
+      "type": "BULLISH_CONTINUATION",
+      "timeframe": "Daily",
+      "identification": {
+        "flagpole": "Sharp rally of 10-40% in 5-15 days with high volume",
+        "flag": "Sideways to slightly downward channel; volume DECLINING; angle max 45 degrees down",
+        "duration": "5-20 days for flag formation"
+      },
+      "entry": "Close above upper flag boundary with volume > 1.5x",
+      "target": "Breakout point + Flagpole height",
+      "stop_loss": "Below lower flag boundary",
+      "score_bonus": 1.5
+    },
+    "CUP_AND_HANDLE": {
+      "type": "BULLISH_CONTINUATION",
+      "timeframe": "Weekly/Daily",
+      "identification": {
+        "cup": "Rounded bottom; depth 12-35%; left and right rims within 5%; duration 7-65 weeks",
+        "handle": "Pullback 5-15%; forms in upper half of cup; volume declining; duration 1-4 weeks",
+        "breakout": "Price + volume spike above pivot (top of handle)"
+      },
+      "entry": "Close above pivot point on above-average volume",
+      "target": "Pivot + Cup depth",
+      "stop_loss": "Below handle's lowest point",
+      "score_bonus": 2.0
+    },
+    "ASCENDING_TRIANGLE": {
+      "type": "BULLISH_CONTINUATION",
+      "identification": {
+        "upper": "Flat resistance line (2+ tests within 1-2%)",
+        "lower": "Rising support trendline (higher lows)",
+        "volume": "Declining during formation",
+        "duration": "2-8 weeks"
+      },
+      "entry": "Close above flat resistance with volume > 1.5x",
+      "target": "Resistance + Triangle height (widest point)",
+      "stop_loss": "Below most recent higher low",
+      "score_bonus": 1.5
+    },
+    "INVERSE_HEAD_AND_SHOULDERS": {
+      "type": "BULLISH_REVERSAL",
+      "identification": {
+        "structure": "Three troughs: Left Shoulder, Head (lowest), Right Shoulder",
+        "shoulders": "Within 3% of each other",
+        "neckline": "Line connecting two peaks between shoulders",
+        "volume": "Declining on right shoulder; spike on neckline break"
+      },
+      "entry": "Close above neckline with volume > 1.5x",
+      "target": "Neckline + (Neckline - Head)",
+      "stop_loss": "Below right shoulder",
+      "score_bonus": 2.0
+    },
+    "HAMMER": {
+      "type": "BULLISH_REVERSAL",
+      "identification": {
+        "lower_wick": ">= 2x body length",
+        "upper_wick": "<= 10% of total range",
+        "body_pct": "<= 35% of total range",
+        "context": "Must appear after 3+ declining candles (downtrend)"
+      },
+      "entry": "Next candle closes above hammer high",
+      "target": "Prior resistance or 3x hammer range above entry",
+      "stop_loss": "Below hammer low",
+      "score_bonus": 1.0
+    },
+    "BULL_PENNANT": {
+      "type": "BULLISH_CONTINUATION",
+      "identification": {
+        "flagpole": "Sharp 10-40% rally",
+        "pennant": "Converging triangle 3-10 days, declining volume",
+        "breakout": "Above upper trendline with volume > 1.5x"
+      },
+      "entry": "Close above upper pennant boundary",
+      "target": "Breakout point + Flagpole height",
+      "stop_loss": "Below pennant's lower boundary",
+      "score_bonus": 1.5
+    },
+    "DOUBLE_TOP": {
+      "type": "BEARISH_REVERSAL",
+      "identification": {
+        "peaks": "Two highs within 2% of each other",
+        "neckline": "Valley between peaks",
+        "confirm": "Close below neckline on volume"
+      },
+      "signal": "SELL / AVOID ALL BUYS",
+      "target_short": "Neckline - (Peak - Neckline)",
+      "stop_loss_short": "Above second peak"
+    },
+    "HEAD_AND_SHOULDERS": {
+      "type": "BEARISH_REVERSAL",
+      "identification": {
+        "structure": "Left shoulder < Head (highest) > Right shoulder",
+        "neckline": "Line connecting troughs",
+        "confirm": "Close below neckline with volume > 1.5x"
+      },
+      "signal": "SELL / EXIT LONGS",
+      "entry_rules": {
+        "bearish_note": "When detected → exit any existing long positions; do not initiate new buys"
+      },
+      "exit_rules": {
+        "X1": "Detection alone → EXIT all long positions in this stock"
+      }
+    },
+    "SYMMETRICAL_TRIANGLE": {
+      "type": "CONTINUATION_NEUTRAL",
+      "identification": {
+        "structure": "Lower highs + higher lows; both trendlines converge",
+        "volume": "Declining during formation",
+        "duration": "2-6 weeks"
+      },
+      "entry_rules": {
+        "E1_bullish": "BREAKOUT up above upper trendline with volume > 1.5x → BUY",
+        "E2_bearish": "Breakdown below lower trendline → AVOID / EXIT"
+      },
+      "target": "Breakout level ± Triangle width at widest point",
+      "stop_loss": "Below/above breakout level",
+      "score_bonus": 1.0
+    },
+    "MORNING_STAR": {
+      "type": "BULLISH_REVERSAL",
+      "identification": {
+        "day1": "Large bearish candle (body > 70% of range)",
+        "day2": "Small body / doji gapping down from Day 1",
+        "day3": "Large bullish candle closing > 50% into Day 1 body"
+      },
+      "confirmation": "Volume Day 3 > Day 1",
+      "entry": "Open of Day 4",
+      "stop_loss": "Below Day 2 low",
+      "score_bonus": 1.0
+    },
+    "EVENING_STAR": {
+      "type": "BEARISH_REVERSAL",
+      "identification": {
+        "day1": "Large bullish candle",
+        "day2": "Small body / doji (indecision)",
+        "day3": "Large bearish candle closing > 50% into Day 1 body"
+      },
+      "signal": "EXIT LONGS — bearish reversal at top",
+      "exit_rules": {
+        "X1": "Evening Star detected → EXIT 100% of any existing long position"
+      }
+    },
+    "ENGULFING_BEARISH": {
+      "type": "BEARISH_REVERSAL",
+      "identification": {
+        "day1": "Bullish candle (green)",
+        "day2": "Bearish candle that opens ABOVE Day 1 close and closes BELOW Day 1 open"
+      },
+      "signal": "EXIT LONGS",
+      "exit_rules": {
+        "X1": "Bearish engulfing at resistance → EXIT 50-100%"
+      }
+    },
+    "CUP_AND_HANDLE_WEEKLY": {
+      "type": "BULLISH_CONTINUATION",
+      "timeframe": "Weekly",
+      "note": "Same as daily Cup & Handle but on weekly chart — much stronger signal",
+      "identification": {
+        "cup_duration": "7–65 weeks",
+        "depth": "12–35%",
+        "handle": "1–4 weeks pullback"
+      },
+      "score_bonus": 2.5,
+      "entry": "Weekly close above pivot point (handle high)",
+      "target": "Pivot + Cup depth",
+      "stop_loss": "Below handle low"
+    }
+  },
+  "stock_entry_exit_rules": {
+    "description": "Entry and exit rules specific to stock category, sector, and type",
+    "by_market_cap": {
+      "LARGE_CAP": {
+        "definition": "Market Cap > ₹20,000 Cr | Examples: RELIANCE, TCS, HDFCBANK, SBIN, INFY",
+        "position_size": "Up to 15% of total capital",
+        "entry_rules": {
+          "E1_TREND": "Buy in Stage 2 uptrend: Close > EMA50 > EMA200 + RSI 45-70",
+          "E2_PULLBACK": "Buy EMA20 bounce in uptrend — next candle close above EMA20 + RSI > 45",
+          "E3_BREAKOUT": "Buy 52W high breakout with Volume > 2x avg + RSI 55-72 (don't chase gap-ups)",
+          "E4_FII_FLOW": "Buy when FII net > ₹2,000 Cr/day for 3+ consecutive days",
+          "E5_POST_EARNINGS": "Buy 5-7 days after positive earnings if stock pulled back 5-8%"
+        },
+        "exit_rules": {
+          "X1": "EMA50 closes below → EXIT 100%",
+          "X2": "FII sells >₹3,000 Cr for 2+ days → EXIT 50%",
+          "X3": "Sector becomes weakest for 5+ days → EXIT",
+          "X4": "RSI > 78 → EXIT 50%; raise trailing stop",
+          "X5": "Volume dries up (< 0.5x avg) for 3+ days at highs → EXIT 25%",
+          "X6": "> 15 trading days without T2 → EXIT ALL"
+        },
+        "stop_loss": {
+          "default": "1.5×ATR14 below entry",
+          "max_pct": "5%",
+          "ideal_pct": "2.5-4%"
+        }
+      },
+      "MIDCAP": {
+        "definition": "Market Cap ₹5,000–₹20,000 Cr | Examples: USHAMART, CERA, TRENT, POLYCAB, DIXON",
+        "position_size": "Maximum 10% of capital",
+        "entry_rules": {
+          "E1": "Require Golden Cross (mandatory for midcap) + RSI 45-65 + Volume > 1.3x",
+          "E2": "Breakout must have Volume > 1.5x (higher bar than large cap)",
+          "E3": "Stock's sector must be in Top 3 momentum sectors",
+          "E4": "Delivery % > 40% confirms genuine institutional buying",
+          "E5": "Within 5% of 52W high + Volume > 1.5x + RSI 58-70 → 52W breakout play"
+        },
+        "exit_rules": {
+          "X1": "Trail to EMA50 (not EMA20 — needs more room)",
+          "X2": "Sector drops >3% in a session → EXIT 100%",
+          "X3": "Volume < 0.6x avg for 3+ days at resistance → EXIT 50%",
+          "X4": "Nifty closes below EMA50 → EXIT (midcaps fall harder in corrections)",
+          "X5": "12 trading days without T2 → EXIT ALL",
+          "X6": "ANY adverse news → EXIT immediately (midcaps react sharply)"
+        },
+        "stop_loss": {
+          "default": "1.5-2.0×ATR14",
+          "max_pct": "7%",
+          "ideal_pct": "4-6%"
+        }
+      },
+      "SMALLCAP": {
+        "definition": "Market Cap < ₹5,000 Cr | Examples: NDR Auto, SJS Enterprises, Faze Three",
+        "position_size": "Maximum 5% per trade; max 2 smallcap positions simultaneously",
+        "mandatory_prerequisites": [
+          "Market cap > ₹500 Cr",
+          "Daily turnover > ₹5 Cr",
+          "Promoter pledge < 20%",
+          "NOT on SEBI ASM/GSM list",
+          "Delivery % > 45%",
+          "Positive earnings for 2+ consecutive quarters"
+        ],
+        "entry_rules": {
+          "E1": "Breakout ONLY — Volume > 3x avg + 52W high break or pattern break",
+          "E2": "Revenue growth > 15% YoY + Net profit positive + D/E < 1.5 (fundamental check mandatory)",
+          "E3": "NEVER buy smallcap in a downtrend — only when breaking to new highs"
+        },
+        "exit_rules": {
+          "X1": "EXIT ENTIRE position at T1 (do not hold for T2 in smallcap)",
+          "X2": "Stop loss max 7% — honor strictly",
+          "X3": "Volume collapses to < 0.3x avg for 2 days at highs → EXIT immediately",
+          "X4": "Stock hits lower circuit (10%/20% down) → EXIT — sign of serious trouble",
+          "X5": "7 trading days max hold regardless",
+          "X6": "Any adverse news → EXIT immediately"
+        },
+        "stop_loss": {
+          "max_pct": "7%",
+          "circuit_rule": "If stock falls 9% intraday → EXIT before circuit hits"
+        }
+      }
+    },
+    "by_sector": {
+      "BANKING_NBFC": {
+        "stocks": "HDFCBANK, ICICIBANK, SBIN, AXISBANK, KOTAKBANK, BAJFINANCE, INDUSINDBK",
+        "entry_rules": {
+          "E1": "Buy 5-7 days before RBI MPC meeting when rate cut is expected",
+          "E2": "Buy when FII net buyers for 3+ consecutive days (BFSI primary sector)",
+          "E3": "Buy after quarterly results showing NPA ratio declined QoQ",
+          "E4": "Buy individual bank when Bank Nifty breaks above EMA200 on volume",
+          "E5": "Aggressive buy at start of rate cut cycle — banks benefit most of any sector"
+        },
+        "exit_rules": {
+          "X1": "EXIT 100% immediately after RBI rate HIKE announcement",
+          "X2": "EXIT 50% if quarterly NPA ratio increased > 0.5%",
+          "X3": "EXIT ALL banking on global banking sector stress news",
+          "X4": "EXIT NBFCs on RBI circular tightening unsecured credit norms",
+          "X5": "EXIT individual bank if Bank Nifty closes below EMA200"
+        },
+        "notes": "Bank Nifty F&O expiry on Thursday — avoid new entries on expiry Thursday"
+      },
+      "IT_TECHNOLOGY": {
+        "stocks": "TCS, INFOSYS, HCLTECH, WIPRO, PERSISTENT, COFORGE | US: AAPL, MSFT, NVDA, GOOGL",
+        "entry_rules": {
+          "E1": "Buy when USD/INR rises above 83 (every ₹1 INR fall = ~2-3% EPS boost for IT)",
+          "E2": "Buy 3-5 days post results if stock fell on guidance but fundamentals intact",
+          "E3": "Buy when Nasdaq breaks to new highs (0.7 correlation with Indian IT)",
+          "E4": "Buy on large deal win (>$100M TCV) with volume > 2x avg",
+          "E5": "Buy IT in first week of each quarter (pre-results expectation trade)"
+        },
+        "exit_rules": {
+          "X1": "EXIT 50% if USD/INR falls below 83 (INR strengthening = margin pressure)",
+          "X2": "EXIT ALL if US GDP prints negative two consecutive quarters",
+          "X3": "EXIT 100% on quarterly results if revenue guidance cut > 2%",
+          "X4": "EXIT Indian IT if Nasdaq closes below 200-day SMA",
+          "X5": "EXIT if company reports attrition > 25%"
+        }
+      },
+      "PHARMA_HEALTHCARE": {
+        "stocks": "SUNPHARMA, DRREDDY, CIPLA, DIVISLAB, AUROPHARMA, ALKEM, LUPIN, MAXHEALTH",
+        "entry_rules": {
+          "E1": "Buy strongly on USFDA facility clearance after previous warning letter",
+          "E2": "Buy on new ANDA approval from USFDA",
+          "E3": "Buy pharma as defensive play when market VIX rises > 20",
+          "E4": "Buy 5-7 days before quarterly results if stock below EMA50 + fundamentals strong",
+          "E5": "Buy on successful specialty product launch with guidance upgrade"
+        },
+        "exit_rules": {
+          "X1": "EXIT ALL on USFDA warning letter — can crash 15-30% same day",
+          "X2": "EXIT 50% if US price erosion > 8% YoY in quarterly results",
+          "X3": "EXIT 30% if key competitor gets same molecule ANDA approval",
+          "X4": "EXIT if key patent expires within 6 months",
+          "X5": "EXIT 100% immediately on USFDA import alert"
+        },
+        "monitoring": "Check FDA website (fdazilla.com) daily for any action on your pharma stocks"
+      },
+      "AUTOMOBILE": {
+        "stocks": "MARUTI, TATAMOTORS, M&M, BAJAJ-AUTO, HEROMOTOCO, APOLLOTYRE",
+        "entry_rules": {
+          "E1": "Buy 1-2 days after monthly sales data beats estimate by > 5%",
+          "E2": "Buy in August-September (pre-festive season buildup)",
+          "E3": "Buy EV-focused autos on positive EV policy announcement",
+          "E4": "Buy auto stocks when Brent crude falls below $75",
+          "E5": "Buy 2-wheelers after above-normal monsoon forecast (rural demand)"
+        },
+        "exit_rules": {
+          "X1": "EXIT 50% if monthly sales misses estimate by > 5%",
+          "X2": "EXIT if Brent crude > $90",
+          "X3": "EXIT auto ancillaries if steel prices rise > 15% QoQ",
+          "X4": "EXIT festive season buys by end of November",
+          "X5": "EXIT on major new EV competitor entry"
+        }
+      },
+      "METALS_MINING": {
+        "stocks": "TATASTEEL, JSWSTEEL, HINDALCO, COALINDIA, NMDC, VEDL, USHAMART",
+        "entry_rules": {
+          "E1": "Buy on China infrastructure stimulus announcement",
+          "E2": "Buy when LME copper breaks multi-year high (global demand signal)",
+          "E3": "Buy steel stocks when India budget allocates high infra capex",
+          "E4": "Buy after 15-20% correction if China PMI turns positive (>50)",
+          "E5": "Buy when DXY falls below 100 (USD weakness boosts commodity prices)"
+        },
+        "exit_rules": {
+          "X1": "EXIT immediately on negative China PMI or property sector stress news",
+          "X2": "EXIT 50% if DXY rises above 106",
+          "X3": "EXIT if government cuts import duty on steel (margin compression)",
+          "X4": "EXIT ALL cyclicals on yield curve inversion signal",
+          "X5": "EXIT if global steel capacity utilization < 75%"
+        }
+      },
+      "FMCG_CONSUMER": {
+        "stocks": "HINDUNILVR, ITC, NESTLEIND, BRITANNIA, DABUR, MARICO, COLPAL",
+        "entry_rules": {
+          "E1": "Buy FMCG when VIX > 20 (defensive sector — safe haven in fear)",
+          "E2": "Buy when palm oil / crude falls (input cost relief — margin expansion)",
+          "E3": "Buy rural FMCG after good monsoon forecast",
+          "E4": "Buy after 20-25% sector correction if PE below 5-year avg"
+        },
+        "exit_rules": {
+          "X1": "EXIT if palm oil/crude surge > 20% in a quarter",
+          "X2": "EXIT if quarterly volume growth < 3% (demand weakness)",
+          "X3": "EXIT FMCG at PE > 70x (expensive relative to growth)",
+          "X4": "EXIT when VIX falls below 13 (money rotates to cyclicals)"
+        }
+      },
+      "ENERGY_OIL_GAS": {
+        "stocks": "RELIANCE, ONGC, OIL_INDIA, BPCL, HPCL, IOC, GAIL, PETRONET",
+        "entry_rules": {
+          "E1": "Buy RELIANCE on Jio ARPU growth + retail EBITDA growing",
+          "E2": "Buy BPCL/HPCL when crude falls AND government raises retail fuel prices",
+          "E3": "Buy ONGC before record date for high dividend (6-8% yield typically)",
+          "E4": "Buy ONGC/OIL when crude rises > $75 (higher realization)",
+          "E5": "Buy GAIL on rising India LNG imports + industrial demand"
+        },
+        "exit_rules": {
+          "X1": "EXIT ONGC/OIL if crude falls below $65",
+          "X2": "EXIT BPCL/HPCL if crude > $90 with no retail price hike",
+          "X3": "EXIT OMCs if election cycle begins (fuel price freeze risk)",
+          "X4": "EXIT BPCL if divestment cancelled again"
+        }
+      },
+      "INFRASTRUCTURE_CAPGOODS": {
+        "stocks": "L&T, SIEMENS, ABB, BEL, HAL, MTAR, BHARATFORG, CUMMINS, KALPATPOWER",
+        "entry_rules": {
+          "E1": "Strong BUY after Union Budget with infra allocation > ₹10 lakh Cr",
+          "E2": "Buy on major defence export approval or DRDO order",
+          "E3": "Buy on large order win (> 3x quarterly revenue)",
+          "E4": "Buy on PLI scheme approval for sector"
+        },
+        "exit_rules": {
+          "X1": "EXIT if quarterly order inflow misses estimate by >15%",
+          "X2": "EXIT if infrastructure allocation cut in budget vs previous year",
+          "X3": "EXIT if EBITDA margin falls below 10%",
+          "X4": "EXIT on repeated order execution delays"
+        }
+      },
+      "US_STOCKS": {
+        "stocks": "AAPL, MSFT, NVDA, GOOGL, META, TSLA, AMZN, JPM, BAC",
+        "market_hours_ist": "7:30 PM – 1:30 AM IST",
+        "entry_rules": {
+          "E1": "Buy 2-3 days after earnings beat + guidance raised",
+          "E2": "Buy tech on Fed rate cut signal (growth stocks re-rate higher)",
+          "E3": "Buy NVDA/MSFT/GOOGL on AI product launch or revenue upgrade",
+          "E4": "Buy S&P 500 leaders after 10-15% correction if earnings intact",
+          "E5": "Buy defensive US stocks (JNJ, PG) when VIX > 25"
+        },
+        "exit_rules": {
+          "X1": "EXIT immediately on guidance cut > 5% from consensus",
+          "X2": "EXIT high-PE tech if Fed signals rate hike",
+          "X3": "EXIT GOOGL/META on major antitrust regulatory action",
+          "X4": "EXIT cyclical US stocks on 2 consecutive GDP contraction quarters",
+          "X5": "EXIT on gross margin decline > 3% QoQ for 2 consecutive quarters"
+        }
+      }
+    },
+    "by_stock_type": {
+      "PSU_STOCKS": {
+        "examples": "SBIN, ONGC, COALINDIA, BEL, HAL, NMDC, NTPC, POWERGRID, BPCL",
+        "entry_rules": {
+          "E1": "Buy before divestment announcement (re-rating catalyst)",
+          "E2": "Buy sector-specific PSU before budget with high allocation expected",
+          "E3": "Buy 3-4 weeks before record date (5%+ dividend yield)",
+          "E4": "Buy at P/B < 1.0 if ROE > 12% (historically mean-reverts up)"
+        },
+        "exit_rules": {
+          "X1": "EXIT 3 months before general election (policy uncertainty)",
+          "X2": "EXIT if divestment cancelled",
+          "X3": "EXIT OMC PSUs on fuel price caps",
+          "X4": "EXIT ONGC/OIL on windfall tax imposition"
+        }
+      },
+      "EXPORT_STOCKS": {
+        "examples": "DRREDDY, SUNPHARMA, INFOSYS, TCS",
+        "entry_rules": {
+          "E1": "Buy when USD/INR rises (more INR per dollar = higher revenue)",
+          "E2": "Buy when US/EU GDP accelerates",
+          "E3": "Buy on favorable currency hedge position in results"
+        },
+        "exit_rules": {
+          "X1": "EXIT when USD/INR falls sharply below 82",
+          "X2": "EXIT on US/EU trade barriers or tariffs on sector",
+          "X3": "EXIT on US/EU GDP turning negative"
+        }
+      },
+      "CYCLICALS": {
+        "examples": "TATASTEEL, HINDALCO, TATAMOTORS, APOLLOTYRE",
+        "entry_rules": {
+          "E1": "Buy at commodity cycle bottom (PE below 5-year avg + commodity recovering)",
+          "E2": "Buy when China PMI > 50 AND commodity prices rising"
+        },
+        "exit_rules": {
+          "X1": "EXIT when PE exceeds 5-year avg by 30% + commodity price flattening",
+          "X2": "EXIT all cyclicals on US yield curve inversion (recession leading indicator)"
+        }
+      }
+    }
+  },
+  "scoring_algorithm": {
+    "pre_filter_eliminators": [
+      {
+        "condition": "sebi_asm_list == True",
+        "action": "DISQUALIFY",
+        "reason": "Surveillance stock"
+      },
+      {
+        "condition": "sebi_gsm_list == True",
+        "action": "DISQUALIFY",
+        "reason": "Surveillance stock"
+      },
+      {
+        "condition": "avg_daily_turnover_cr < 5",
+        "action": "DISQUALIFY",
+        "reason": "Illiquid"
+      },
+      {
+        "condition": "ema50 < ema200",
+        "action": "DISQUALIFY",
+        "reason": "Death Cross active"
+      },
+      {
+        "condition": "close < ema200 * 0.85",
+        "action": "DISQUALIFY",
+        "reason": "Deep downtrend"
+      },
+      {
+        "condition": "promoter_pledge_pct > 50",
+        "action": "DISQUALIFY",
+        "reason": "Management risk"
+      },
+      {
+        "condition": "debt_to_equity > 3.0",
+        "action": "DISQUALIFY",
+        "reason": "High debt risk"
+      },
+      {
+        "condition": "rsi14 > 82",
+        "action": "DISQUALIFY",
+        "reason": "Dangerously overbought"
+      },
+      {
+        "condition": "rsi14 < 22",
+        "action": "DISQUALIFY",
+        "reason": "Deep downtrend"
+      }
+    ],
+    "scoring_rules": [
+      {
+        "condition": "close > ema20",
+        "points": 1.0,
+        "category": "EMA"
+      },
+      {
+        "condition": "close > ema50",
+        "points": 1.5,
+        "category": "EMA"
+      },
+      {
+        "condition": "close > ema200",
+        "points": 1.5,
+        "category": "EMA"
+      },
+      {
+        "condition": "ema20 > ema50",
+        "points": 0.5,
+        "category": "EMA"
+      },
+      {
+        "condition": "golden_cross == True",
+        "points": 1.0,
+        "category": "EMA"
+      },
+      {
+        "condition": "fresh_golden_cross == True (< 5 days)",
+        "points": 0.5,
+        "category": "EMA_BONUS"
+      },
+      {
+        "condition": "45 <= rsi14 <= 65",
+        "points": 2.0,
+        "category": "RSI"
+      },
+      {
+        "condition": "40 <= rsi14 < 45",
+        "points": 1.0,
+        "category": "RSI"
+      },
+      {
+        "condition": "65 < rsi14 <= 70",
+        "points": 1.0,
+        "category": "RSI"
+      },
+      {
+        "condition": "rsi14 > 75",
+        "points": -1.0,
+        "category": "RSI_PENALTY"
+      },
+      {
+        "condition": "macd_line > macd_signal",
+        "points": 1.0,
+        "category": "MACD"
+      },
+      {
+        "condition": "fresh_macd_crossover == True (< 3 days)",
+        "points": 2.0,
+        "category": "MACD"
+      },
+      {
+        "condition": "macd_histogram > 0 AND increasing",
+        "points": 0.5,
+        "category": "MACD"
+      },
+      {
+        "condition": "macd_line < macd_signal",
+        "points": -1.5,
+        "category": "MACD_PENALTY"
+      },
+      {
+        "condition": "volume_ratio > 1.5",
+        "points": 0.5,
+        "category": "VOLUME"
+      },
+      {
+        "condition": "volume_ratio > 2.0",
+        "points": 1.0,
+        "category": "VOLUME"
+      },
+      {
+        "condition": "volume_ratio > 3.0",
+        "points": 1.5,
+        "category": "VOLUME"
+      },
+      {
+        "condition": "price_up AND volume_up",
+        "points": 0.5,
+        "category": "VOLUME_CONFIRM"
+      },
+      {
+        "condition": "price_up AND volume_down",
+        "points": -0.5,
+        "category": "VOLUME_WARN"
+      },
+      {
+        "condition": "chart_pattern_detected == True",
+        "points": 1.0,
+        "category": "PATTERN"
+      },
+      {
+        "condition": "fresh_breakout == True",
+        "points": 1.5,
+        "category": "PATTERN"
+      },
+      {
+        "condition": "pe_ratio < sector_avg_pe",
+        "points": 0.5,
+        "category": "FUNDAMENTAL"
+      },
+      {
+        "condition": "revenue_growth_yoy > 10",
+        "points": 0.5,
+        "category": "FUNDAMENTAL"
+      },
+      {
+        "condition": "delivery_pct > 35",
+        "points": 0.5,
+        "category": "DELIVERY"
+      },
+      {
+        "condition": "market_cap_cr > 5000",
+        "points": 0.5,
+        "category": "LIQUIDITY"
+      },
+      {
+        "condition": "sector in hot_sectors_list",
+        "points": 0.5,
+        "category": "SECTOR_BONUS"
+      }
+    ],
+    "tier_classification": {
+      "TIER_1": {
+        "min_score": 8.0,
+        "label": "⭐⭐⭐ Highest Priority",
+        "phase": "Phase 1 — Today",
+        "color": "#00E676"
+      },
+      "TIER_2": {
+        "min_score": 6.5,
+        "label": "⭐⭐ Good Setup",
+        "phase": "Phase 2 — Day 2-4",
+        "color": "#FFB300"
+      },
+      "TIER_3": {
+        "min_score": 5.0,
+        "label": "⭐ Conditional",
+        "phase": "Phase 3 — Day 5-7",
+        "color": "#FF9800"
+      },
+      "REJECT": {
+        "min_score": 0.0,
+        "label": "❌ Avoid",
+        "phase": "Do Not Trade",
+        "color": "#FF5252"
+      }
+    }
+  },
+  "trade_parameters": {
+    "entry_zone": {
+      "method": "ATR-based",
+      "formula": {
+        "entry_low": "trigger_price - (0.5 * ATR14)",
+        "entry_high": "trigger_price + (0.5 * ATR14)"
+      },
+      "trigger_price_options": [
+        "current_close",
+        "breakout_level",
+        "ema20_bounce_level",
+        "pattern_pivot_point"
+      ],
+      "rules": [
+        "NEVER enter above entry_high — skip or wait",
+        "If price gaps above entry_high at open → SKIP this trade",
+        "Prefer limit orders within zone over market orders"
+      ]
+    },
+    "target1": {
+      "methods": [
+        "ATR: entry + 2.25 * ATR14",
+        "Pattern measured move (specific formula per pattern)",
+        "Prior swing high / resistance level"
+      ],
+      "selection": "Use LOWEST of all methods (most conservative)",
+      "action_at_t1": "SELL 50% of position; move SL to breakeven"
+    },
+    "target2": {
+      "methods": [
+        "ATR: entry + 4.5 * ATR14",
+        "52-week high",
+        "Pattern measured move extension",
+        "Fibonacci 127.2% extension"
+      ],
+      "selection": "Use LOWEST of all methods",
+      "action_at_t2": "SELL remaining 50% OR apply trailing stop"
+    },
+    "stop_loss": {
+      "methods": [
+        "ATR: entry - 1.5 * ATR14",
+        "Below pattern invalidation level",
+        "Below EMA50 - (0.5 * ATR14)",
+        "Below most recent swing low - (0.2 * ATR14)"
+      ],
+      "selection": "Use TIGHTEST (highest) stop that still makes technical sense",
+      "max_loss_pct": 7.0,
+      "rules": [
+        "NEVER move SL further down once set",
+        "Only acceptable modification: move SL UP (trailing)",
+        "AUTO-EXIT if stock falls 7% from entry regardless of SL level"
+      ]
+    },
+    "rr_ratio": {
+      "minimum_acceptable": 2.0,
+      "preferred": 2.5,
+      "ideal": 3.0,
+      "formula": "(target2 - entry) / (entry - stop_loss)",
+      "gate": "IF rr_ratio < 2.0 → REJECT TRADE (display warning to user)"
+    },
+    "position_sizing": {
+      "formula": "shares = (capital * risk_pct) / (entry_price - stop_loss)",
+      "max_pct_per_trade": {
+        "large_cap": 15.0,
+        "midcap": 10.0,
+        "smallcap": 7.0
+      },
+      "risk_pct_options": {
+        "conservative": 1.0,
+        "moderate": 1.5,
+        "aggressive": 2.0
+      }
+    }
+  },
+  "deployment_strategy": {
+    "phases": {
+      "phase1": {
+        "capital_pct": 50,
+        "timing": "Day 0-1 (today/tomorrow)",
+        "stocks": "Tier 1 only (score >= 8.0)",
+        "trigger_conditions": [
+          "india_vix < 20",
+          "fii_net_flow_last_2_days > 0",
+          "nifty_above_ema20 == True",
+          "global_markets_not_panicking == True"
+        ],
+        "order_time": "9:15–9:45 AM IST (after opening volatility settles)"
+      },
+      "phase2": {
+        "capital_pct": 30,
+        "timing": "Day 2-4",
+        "stocks": "Tier 2 stocks or Tier 1 with RSI pullback",
+        "trigger_conditions": [
+          "phase1_pnl >= -2pct",
+          "nifty_holding_support == True",
+          "vix_stable_or_declining == True"
+        ],
+        "order_time": "When RSI pulls back to < 68 on target stock"
+      },
+      "phase3": {
+        "capital_pct": 20,
+        "timing": "Day 5-7",
+        "stocks": "Tier 3 conditional stocks where trigger has now fired",
+        "trigger_conditions": [
+          "specific_indicator_trigger",
+          "phase1_phase2_profitable == True",
+          "india_vix < 20"
+        ],
+        "note": "Also serves as reserve capital if Phase 1/2 stop losses hit"
+      }
+    },
+    "vix_throttle": {
+      "0-13": {
+        "action": "Deploy all phases normally",
+        "color": "green"
+      },
+      "13-17": {
+        "action": "Optimal — full deployment",
+        "color": "green"
+      },
+      "17-20": {
+        "action": "Reduce each phase by 20%; tighter SLs",
+        "color": "yellow"
+      },
+      "20-25": {
+        "action": "Phase 1 only; 50% reduced size",
+        "color": "orange"
+      },
+      "25-30": {
+        "action": "STOP new positions; manage existing",
+        "color": "red"
+      },
+      "30+": {
+        "action": "EXIT ALL; hold cash; wait for VIX collapse",
+        "color": "dark_red"
+      }
+    }
+  },
+  "exit_rules_engine": {
+    "stop_loss_exit": {
+      "rule": "Price hits SL → EXIT 100% immediately",
+      "no_exceptions": true,
+      "auto_alert": true,
+      "emergency_override": "If stock falls -7% from entry in any session → AUTO-SELL signal"
+    },
+    "target1_exit": {
+      "rule": "Price reaches T1 → SELL 50%; move SL to breakeven",
+      "auto_alert": true,
+      "after_t1": "Remaining 50% is now risk-free trade"
+    },
+    "trailing_stop": {
+      "description": "Applied to remaining 50% after T1 is hit",
+      "table": [
+        {
+          "move_from_entry_pct": 2.0,
+          "trail_sl_to": "entry + 0.5%"
+        },
+        {
+          "move_from_entry_pct": 3.0,
+          "trail_sl_to": "entry + 1.0%"
+        },
+        {
+          "move_from_entry_pct": 4.0,
+          "trail_sl_to": "entry + 1.5%"
+        },
+        {
+          "move_from_entry_pct": 5.0,
+          "trail_sl_to": "entry + 2.5%"
+        },
+        {
+          "move_from_entry_pct": 6.0,
+          "trail_sl_to": "entry + 3.5%"
+        },
+        {
+          "move_from_entry_pct": 7.0,
+          "trail_sl_to": "entry + 4.5%"
+        },
+        {
+          "move_from_entry_pct": 8.0,
+          "trail_sl_to": "entry + 5.5%"
+        }
+      ]
+    },
+    "target2_exit": {
+      "rule": "Price reaches T2 → SELL remaining 50%",
+      "exception": "If volume > 2x avg AND RSI < 80 → hold 25% with tight trailing stop"
+    },
+    "time_exit": {
+      "rule": "If no movement toward T1 within 5 trading days → EXIT",
+      "decision_tree": {
+        "day5_pnl_below_minus1pct": "EXIT 100%",
+        "day5_pnl_flat": "EXIT 50%; give 3 more days",
+        "day5_pnl_above_plus1pct": "HOLD; reassess daily"
+      },
+      "max_holding_days": 15
+    },
+    "emergency_exit_triggers": [
+      "india_vix_spike_above_25_intraday",
+      "nifty_closes_below_ema200",
+      "fii_sells_above_5000cr_single_day",
+      "sebi_action_on_company",
+      "fraud_news_confirmed",
+      "rating_downgrade_to_default",
+      "global_black_swan_event"
+    ]
+  },
+  "advanced_indicators_extended": {
+    "ADX": {
+      "period": 14,
+      "description": "Trend strength — see technical_indicators.ADX",
+      "name": "Adx"
+    },
+    "CCI": {
+      "period": 20,
+      "formula": "CCI = (TP - SMA_TP) / (0.015 * MeanDev)",
+      "library": "pandas_ta.cci(...)",
+      "entry_rules": {
+        "E1": "CCI crosses above -100 → BUY (oversold reversal)",
+        "E2": "CCI bullish divergence → BUY"
+      },
+      "exit_rules": {
+        "X1": "CCI crosses below +100 → EXIT 50%",
+        "X2": "CCI bearish divergence → EXIT"
+      },
+      "name": "Cci"
+    },
+    "WILLIAMS_R": {
+      "period": 14,
+      "formula": "WR = (HH14 - Close)/(HH14 - LL14) * -100",
+      "library": "pandas_ta.willr(...)",
+      "entry_rules": {
+        "E1": "WR crosses above -80 → BUY (oversold)"
+      },
+      "exit_rules": {
+        "X1": "WR crosses below -20 → EXIT (overbought)"
+      },
+      "name": "Williams R"
+    },
+    "ROC": {
+      "period": 12,
+      "formula": "ROC = (Close - Close_12d_ago) / Close_12d_ago * 100",
+      "library": "pandas_ta.roc(...)",
+      "entry_rules": {
+        "E1": "ROC crosses above 0 → BUY"
+      },
+      "exit_rules": {
+        "X1": "ROC crosses below 0 → EXIT"
+      },
+      "name": "Roc"
+    },
+    "ICHIMOKU": {
+      "description": "Ichimoku cloud — comprehensive trend system",
+      "entry_rules": {
+        "E1": "Price above cloud + Tenkan > Kijun → BUY",
+        "E2": "Price breaks above cloud → BUY"
+      },
+      "exit_rules": {
+        "X1": "Price enters cloud → EXIT 50%",
+        "X2": "Tenkan crosses below Kijun → EXIT"
+      },
+      "name": "Ichimoku"
+    }
+  },
+  "backtesting_module": {
+    "description": "Test strategies on historical data",
+    "strategies": [
+      "Golden Cross + RSI",
+      "Bull Flag Breakout",
+      "MACD Crossover",
+      "Multi-Indicator Confluence"
+    ],
+    "output_metrics": [
+      "Win rate",
+      "Profit factor",
+      "Max drawdown",
+      "Sharpe ratio",
+      "CAGR",
+      "Expectancy",
+      "Best/worst trade",
+      "Monthly P&L calendar"
+    ],
+    "ui": "Equity curve + drawdown chart + monthly heatmap + trade log table"
+  },
+  "trade_journal": {
+    "fields": [
+      "ticker",
+      "setup",
+      "entry_date",
+      "entry_price",
+      "quantity",
+      "target1",
+      "target2",
+      "stop_loss",
+      "rr_ratio",
+      "tier",
+      "score_at_entry",
+      "phase",
+      "market_context",
+      "exit_date",
+      "exit_price",
+      "exit_reason",
+      "pnl_rs",
+      "pnl_pct",
+      "followed_rules",
+      "emotion_rating",
+      "what_worked",
+      "what_didnt",
+      "lesson_learned"
+    ],
+    "analytics": [
+      "Win/loss by month/sector/setup/hold_period",
+      "Mistake tracker",
+      "Psychology vs performance",
+      "Best/worst setups"
+    ]
+  },
+  "screener_module": {
+    "preset_screeners": [
+      "Golden Cross Fresh (< 5 days)",
+      "RSI Sweet Spot 45-65 + MACD Bullish",
+      "Bollinger Squeeze Breakout",
+      "52-Week High Breakout",
+      "Bull Flag Setup",
+      "Delivery Surge (>50%) + Price Up",
+      "Multi-Indicator Confluence (All 9 indicators bullish)",
+      "Pre-Earnings Setup",
+      "US Swing Setups",
+      "Overnight Gap Analysis"
+    ],
+    "custom_screener_builder": "Drag-and-drop condition builder; save and schedule custom screeners"
+  },
+  "fo_module": {
+    "features": [
+      "Options chain viewer (NSEIndia data)",
+      "Max Pain tracker with alerts",
+      "PCR monitor (PCR > 1.2 = bullish; < 0.6 = bearish)",
+      "Expiry calendar (avoid new entries on expiry Thursday)",
+      "OI buildup analyzer (rising price + rising OI = bullish)"
+    ],
+    "expiry_rules": {
+      "rule1": "Avoid new swing entries on F&O expiry Thursday",
+      "rule2": "Post-expiry Monday good entry day (clean trend continuation)",
+      "rule3": "Track Max Pain ± 3% for directional bias near expiry"
+    }
+  },
+  "earnings_calendar": {
+    "seasons": {
+      "Q1": "July-Aug",
+      "Q2": "Oct-Nov",
+      "Q3": "Jan-Feb",
+      "Q4": "Apr-May"
+    },
+    "pre_earnings": "Buy 5-7 days before if RSI < 60 + stock below 52W high; SELL 1-2 days before (not holding through results)",
+    "post_earnings": {
+      "beat_raise": "BUY aggressively",
+      "beat_no_raise": "Hold — no new entry",
+      "miss_lower": "EXIT 100% immediately",
+      "gap_up_8pct": "Wait 3-5 days for pullback"
+    }
+  },
+  "global_macro_impact": {
+    "crude_rising_above_90": {
+      "buy": "ONGC, OIL INDIA",
+      "sell": "BPCL, HPCL, IndiGo, Tyres, Paints"
+    },
+    "usd_dxy_above_106": {
+      "buy": "IT exports, Pharma exports",
+      "sell": "Reduce broad market exposure"
+    },
+    "fed_rate_cut": {
+      "action": "BUY aggressively — trigger Phase 1 immediately across all sectors"
+    },
+    "china_stimulus": {
+      "buy": "Indian metals (TATASTEEL, HINDALCO, NMDC)"
+    },
+    "vix_above_25": {
+      "action": "HALT all new positions; manage existing strictly"
+    }
+  },
+  "news_impact_engine": {
+    "immediate_exit_triggers": [
+      "USFDA warning letter (pharma)",
+      "Fraud/accounting scandal news",
+      "SEBI investigation action",
+      "Rating downgrade to default",
+      "Key promoter arrested"
+    ],
+    "immediate_buy_triggers": [
+      "USFDA facility clearance after warning",
+      "Large order win > 3x quarterly revenue",
+      "Fed rate cut announcement",
+      "RBI rate cut",
+      "Company upgraded guidance by >5%"
+    ],
+    "news_sources": [
+      "Moneycontrol RSS",
+      "Economic Times Markets RSS",
+      "Business Standard RSS",
+      "LiveMint RSS",
+      "Reuters India RSS",
+      "CNBC RSS",
+      "Yahoo Finance US"
+    ]
+  },
+  "performance_analytics": {
+    "metrics": [
+      "Total P&L",
+      "CAGR",
+      "Win rate",
+      "Profit factor",
+      "Max drawdown",
+      "Sharpe ratio",
+      "Sortino ratio"
+    ],
+    "by_dimension": [
+      "Period (daily/weekly/monthly)",
+      "Sector",
+      "Setup/pattern",
+      "Market cap category",
+      "Holding period",
+      "Entry phase"
+    ],
+    "charts": [
+      "Equity curve",
+      "Monthly P&L bar",
+      "Win/loss histogram",
+      "Drawdown chart"
+    ],
+    "export": "PDF Report + CSV + Excel"
+  },
+  "tax_module": {
+    "india": {
+      "STCG": "20% on gains (holding <= 12 months)",
+      "LTCG": "12.5% on gains > ₹1.25 lakh (holding > 12 months)",
+      "STT": "0.1% on buy + 0.1% on sell (delivery)"
+    },
+    "features": [
+      "Auto STCG/LTCG classification",
+      "Annual P&L for tax filing",
+      "Tax liability estimate",
+      "CA-friendly export"
+    ]
+  },
+  "fo_rules_complete": {
+    "pcr_rules": {
+      "PCR_above_1.2": "BULLISH — contrarian signal — deploy capital",
+      "PCR_0.8_to_1.2": "NEUTRAL",
+      "PCR_below_0.6": "CAUTION — complacency — reduce exposure"
+    },
+    "max_pain_rules": {
+      "stock_above_maxpain_3pct": "Bearish pressure toward expiry",
+      "stock_below_maxpain_3pct": "Bullish pressure toward expiry"
+    },
+    "oi_buildup": {
+      "rising_price_rising_oi": "Long buildup — BULLISH",
+      "falling_price_rising_oi": "Short buildup — BEARISH",
+      "falling_price_falling_oi": "Short covering — BULLISH REVERSAL",
+      "rising_price_falling_oi": "Long unwinding — BEARISH"
+    }
+  },
+  "circuit_breaker_rules": {
+    "stock_circuits": {
+      "5pct": "Paused 15 min",
+      "10pct": "Paused 15 min",
+      "20pct": "Halted for the day"
+    },
+    "app_rules": {
+      "lower_circuit_alert": "CRITICAL alert — consider proactive exit before circuit hits",
+      "near_circuit_rule": "If stock down 9% intraday → EXIT immediately before circuit locks you in"
+    }
+  },
+  "brokerage_integration": {
+    "supported": [
+      "Zerodha Kite Connect (₹2000/month)",
+      "Angel SmartAPI (free)",
+      "Upstox API (free)",
+      "Interactive Brokers (US stocks)"
+    ],
+    "auto_orders": {
+      "enabled": false,
+      "safety": "User must confirm each order; max 10% per trade; disabled when VIX > 20"
+    }
+  },
+  "market_data_engine": {
+    "indian_markets": {
+      "live_data": {
+        "source": "NSEIndia unofficial API + yfinance",
+        "tickers_format": "TICKER.NS for NSE (e.g. SBIN.NS)",
+        "refresh_rate_seconds": 15,
+        "market_hours_ist": {
+          "open": "09:15",
+          "close": "15:30"
+        },
+        "pre_market_ist": {
+          "open": "09:00",
+          "close": "09:15"
+        },
+        "indices": [
+          "^NSEI (Nifty 50)",
+          "^BSESN (Sensex)",
+          "NIFTY_BANK (Bank Nifty)",
+          "^VIX (India VIX)"
+        ]
+      },
+      "eod_data": {
+        "source": "yfinance (free, daily updated)",
+        "cache_policy": "Store in local SQLite; refresh once daily after 4 PM IST",
+        "lookback": "252 trading days (1 year)"
+      },
+      "fii_dii_data": {
+        "source": "NSEIndia website scraping (pandas read_html or requests)",
+        "url": "https://www.nseindia.com/market-data/fii-dii-activity",
+        "refresh": "Once per day after market close (4:30 PM IST)",
+        "fields": [
+          "FII_net_buy_sell_cr",
+          "DII_net_buy_sell_cr",
+          "date"
+        ]
+      },
+      "delivery_data": {
+        "source": "NSEIndia bhavcopy files (free daily download)",
+        "url_format": "https://nseindia.com/content/historical/EQUITIES/{YEAR}/{MONTH}/cm{DATE}bhav.csv.zip"
+      }
+    },
+    "us_markets": {
+      "live_data": {
+        "source": "yfinance (delayed 15 min free) or Polygon.io (real-time paid)",
+        "tickers_format": "Standard ticker (e.g. AAPL, MSFT, TSLA)",
+        "market_hours_est": {
+          "open": "09:30",
+          "close": "16:00"
+        },
+        "ist_equivalent": {
+          "open": "19:00",
+          "close": "01:30 next day"
+        }
+      },
+      "indices": [
+        "^GSPC (S&P 500)",
+        "^IXIC (Nasdaq)",
+        "^DJI (Dow Jones)",
+        "^RUT (Russell 2000)"
+      ]
+    },
+    "global_macro": {
+      "crude_oil": "yf.download('BZ=F')",
+      "gold": "yf.download('GC=F')",
+      "dxy": "yf.download('DX-Y.NYB')",
+      "us_10y_yield": "yf.download('^TNX')",
+      "usd_inr": "yf.download('USDINR=X')",
+      "gift_nifty": "yf.download('NIFTY_FUT.NS') — proxy; actual from SGX feed",
+      "refresh_rate_minutes": 15
+    },
+    "news_engine": {
+      "sources": [
+        {
+          "name": "Moneycontrol",
+          "rss": "https://www.moneycontrol.com/rss/latestnews.xml"
+        },
+        {
+          "name": "Economic Times",
+          "rss": "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"
+        },
+        {
+          "name": "LiveMint",
+          "rss": "https://www.livemint.com/rss/markets"
+        },
+        {
+          "name": "Business Standard",
+          "rss": "https://www.business-standard.com/rss/markets-106.rss"
+        },
+        {
+          "name": "Reuters India",
+          "rss": "https://feeds.reuters.com/reuters/INbusinessNews"
+        },
+        {
+          "name": "Yahoo Finance (US)",
+          "library": "feedparser"
+        },
+        {
+          "name": "CNBC",
+          "rss": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"
+        }
+      ],
+      "processing": {
+        "sentiment_analysis": "TextBlob or VADER (free NLP libraries) for headline sentiment",
+        "ticker_extraction": "spaCy NER + custom stock ticker dictionary (NSE 2000+ stocks + S&P 500)",
+        "refresh_minutes": 10,
+        "max_articles_stored": 500
+      }
+    },
+    "off_market_mode": {
+      "description": "The app works 24/7 — not just during market hours",
+      "features": [
+        "Pre-market prediction using previous close + global overnight movements",
+        "News sentiment analysis on latest headlines",
+        "Gift Nifty based gap-up/gap-down prediction for India open",
+        "US market overnight move impact on Indian sectors (IT, Pharma especially)",
+        "Watchlist monitoring with last known prices",
+        "Alerts active 24/7 (re-check when market opens)",
+        "Scan runs on latest EOD data + latest news for next-day preparation",
+        "Morning Report auto-generated at 7:30 AM IST"
+      ],
+      "morning_report": {
+        "time": "07:30 AM IST",
+        "content": [
+          "Global markets overnight summary",
+          "Gift Nifty / S&P 500 futures signal",
+          "Expected Nifty gap at open",
+          "Top 5 stocks to watch today (from previous scan)",
+          "Key news catalysts overnight",
+          "FII data from previous day",
+          "Today's key events/data releases",
+          "Recommended Phase 1 buy list with prices"
+        ],
+        "delivery": [
+          "email",
+          "whatsapp",
+          "desktop notification"
+        ]
+      }
+    }
+  },
+  "prediction_engine": {
+    "description": "AI-powered price direction and swing trade prediction",
+    "methods": [
+      {
+        "name": "Technical Score Prediction",
+        "logic": "Score >= 8.0 + Pattern confirmed + Volume surge = BULLISH prediction",
+        "confidence": "Based on historical accuracy of each signal combination"
+      },
+      {
+        "name": "Multi-Indicator Consensus",
+        "logic": "Count of bullish signals vs bearish signals across all 9 indicators",
+        "output": "Bullish if 7+ of 9 indicators bullish; Bearish if 6+ bearish"
+      },
+      {
+        "name": "Pattern Target Prediction",
+        "logic": "Detected pattern → apply measured move formula → price target",
+        "output": "Price range (low_target, high_target) with probability %"
+      },
+      {
+        "name": "News Sentiment + Price Impact",
+        "logic": "Bullish news headline for ticker → +0.5 confidence; multiple bullish → +1.0",
+        "output": "Sentiment score feeds into overall prediction"
+      },
+      {
+        "name": "AI LLM Analysis (Optional)",
+        "logic": "Send indicator values + news + pattern to GPT-4 API or local Ollama LLM",
+        "prompt_template": "Section M1 from technical parameters document",
+        "output": "AI narrative + trade thesis + risk factors"
+      }
+    ],
+    "prediction_output": {
+      "direction": "BULLISH / BEARISH / NEUTRAL",
+      "confidence_pct": "0–100%",
+      "7_day_price_range": {
+        "low": "calculated",
+        "high": "calculated"
+      },
+      "key_levels": {
+        "immediate_support": "calculated",
+        "immediate_resistance": "calculated",
+        "major_support": "calculated",
+        "major_resistance": "calculated"
+      },
+      "swing_potential_pct": "estimated % move",
+      "risk_reward": "calculated",
+      "recommended_action": "BUY / WAIT / AVOID / SELL",
+      "entry_timing": "IMMEDIATE / WAIT_FOR_DIP / WAIT_FOR_CONFIRMATION",
+      "narrative": "3-5 sentence AI trade thesis"
+    }
+  },
+  "market_context_engine": {
+    "market_mood": {
+      "inputs": [
+        {
+          "name": "india_vix",
+          "weight": 0.25
+        },
+        {
+          "name": "fii_net_flow_5day",
+          "weight": 0.25
+        },
+        {
+          "name": "nifty_vs_ema20",
+          "weight": 0.2
+        },
+        {
+          "name": "pcr_ratio",
+          "weight": 0.15
+        },
+        {
+          "name": "advance_decline_ratio",
+          "weight": 0.15
+        }
+      ],
+      "output_levels": {
+        "EXTREME_GREED": {
+          "score_range": [
+            80,
+            100
+          ],
+          "color": "#FF5252",
+          "action": "CAUTION — market frothy"
+        },
+        "GREED": {
+          "score_range": [
+            60,
+            80
+          ],
+          "color": "#FF9800",
+          "action": "SELECTIVE"
+        },
+        "NEUTRAL": {
+          "score_range": [
+            40,
+            60
+          ],
+          "color": "#FFFFFF",
+          "action": "NORMAL SWING"
+        },
+        "FEAR": {
+          "score_range": [
+            20,
+            40
+          ],
+          "color": "#00E676",
+          "action": "GOOD BUY ZONE"
+        },
+        "EXTREME_FEAR": {
+          "score_range": [
+            0,
+            20
+          ],
+          "color": "#00D4FF",
+          "action": "BEST BUYING OPPORTUNITY"
+        }
+      }
+    },
+    "pre_market_checklist": {
+      "checks": [
+        {
+          "name": "Gift Nifty vs Nifty prev close",
+          "signal": "Positive gap > 50 = caution on buys; Negative gap = buy dip opportunity"
+        },
+        {
+          "name": "US market overnight",
+          "signal": "S&P > +0.5% = positive; S&P < -1% = caution"
+        },
+        {
+          "name": "Asian markets today",
+          "signal": "All positive = strong open; Shanghai weak = metals weak"
+        },
+        {
+          "name": "Crude Oil direction",
+          "signal": "Down = good for India; Up > 3% = negative"
+        },
+        {
+          "name": "India VIX trend",
+          "signal": "Declining = deploy capital; Rising = reduce risk"
+        },
+        {
+          "name": "FII yesterday",
+          "signal": "Net buyer = bullish; Net seller > 2000 Cr = caution"
+        },
+        {
+          "name": "Key events today",
+          "signal": "RBI/Fed/CPI = pause new positions"
+        }
+      ]
+    }
+  },
+  "notification_system": {
+    "desktop_notifications": {
+      "library": "plyer (cross-platform) OR win10toast (Windows only)",
+      "triggers": [
+        "price_alert",
+        "pattern_detected",
+        "scan_complete",
+        "vix_warning",
+        "fii_alert",
+        "target_hit",
+        "stop_hit"
+      ],
+      "format": {
+        "title": "SwingEdge Alert",
+        "body": "[TICKER] [ALERT_TYPE]: [MESSAGE] at ₹[PRICE]",
+        "icon": "swingpro_icon.png",
+        "timeout_seconds": 10,
+        "sound": true
+      },
+      "settings": {
+        "enable_during_market_hours": true,
+        "enable_outside_market": true,
+        "snooze_options": [
+          "5 min",
+          "15 min",
+          "1 hour",
+          "disable"
+        ],
+        "quiet_hours": {
+          "start": "22:00",
+          "end": "08:00"
+        }
+      }
+    },
+    "email_notifications": {
+      "libraries": [
+        "smtplib (Gmail SMTP — free)",
+        "SendGrid API (free tier: 100 emails/day)"
+      ],
+      "smtp_config": {
+        "provider_options": [
+          "Gmail",
+          "Outlook",
+          "Yahoo",
+          "Custom SMTP"
+        ],
+        "gmail_setup": {
+          "smtp_server": "smtp.gmail.com",
+          "port": 587,
+          "auth": "App Password (enable 2FA on Gmail → generate App Password)",
+          "code": "smtplib.SMTP_SSL('smtp.gmail.com', 465)"
+        }
+      },
+      "email_template": {
+        "subject": "🚨 SwingEdge Alert: [TICKER] [ALERT_TYPE]",
+        "body_sections": [
+          "Alert Details (ticker, price, condition triggered)",
+          "Current Technical Status (RSI, MACD, EMA, Volume)",
+          "Trade Parameters (Entry zone, T1, T2, SL, R:R)",
+          "Recommended Action",
+          "Market Context (Nifty, VIX, FII)",
+          "Risk Warning"
+        ],
+        "format": "HTML email with color coding (green/red/yellow)"
+      },
+      "triggers": {
+        "PRICE_BUY_ALERT": "Stock enters buy zone (entry_low reached)",
+        "TARGET1_HIT": "Stock reaches Target 1",
+        "TARGET2_HIT": "Stock reaches Target 2",
+        "STOP_LOSS_HIT": "Stock hits stop loss — EXIT",
+        "PATTERN_DETECTED": "New bullish pattern identified by scanner",
+        "HIGH_SCORE_STOCK": "New stock scores above 8.5 in scan",
+        "VIX_WARNING": "India VIX crosses 20 (caution)",
+        "FII_HEAVY_SELL": "FII sells > ₹3,000 Cr in a session",
+        "DAILY_SCAN_REPORT": "Morning email with top 5 swing trade picks (7:30 AM IST)"
+      },
+      "frequency_limit": {
+        "max_per_hour": 10,
+        "max_per_day": 50,
+        "digest_mode": "Bundle non-urgent alerts into hourly digest"
+      }
+    },
+    "whatsapp_notifications": {
+      "method_options": [
+        {
+          "name": "Twilio WhatsApp API",
+          "cost": "Free sandbox + paid ($0.005/message)",
+          "setup": "1. Create Twilio account (free) → 2. Enable WhatsApp sandbox → 3. Add Twilio phone to contacts → 4. Send join code → 5. Use API",
+          "library": "pip install twilio",
+          "code_example": "client.messages.create(from_='whatsapp:+14155238886', to='whatsapp:+91XXXXXXXXXX', body='SwingEdge Alert: ...')"
+        },
+        {
+          "name": "pywhatkit (FREE — uses WhatsApp Web)",
+          "cost": "Completely free",
+          "limitation": "Requires browser open + WhatsApp logged in on laptop",
+          "library": "pip install pywhatkit",
+          "code_example": "pywhatkit.sendwhatmsg_instantly('+91XXXXXXXXXX', 'Alert message', 15, True)"
+        },
+        {
+          "name": "WhatsApp Business API (Meta)",
+          "cost": "Free for first 1000 conversations/month",
+          "setup": "Requires business verification; more complex setup",
+          "recommended_for": "High volume users"
+        }
+      ],
+      "message_template": {
+        "format": "Text with emoji for visual quick scanning",
+        "example": "🔔 SwingEdge Alert\n📌 Stock: SBIN\n⚡ Type: BUY ZONE REACHED\n💰 Price: ₹1,090\n🎯 T1: ₹1,134 | T2: ₹1,166\n🛑 SL: ₹1,060\n📊 RSI: 53.5 | Score: 9.0/10\n✅ Action: ENTER POSITION (Phase 1)\n⏰ Time: 10:45 AM IST"
+      },
+      "message_types": {
+        "instant": [
+          "STOP_LOSS_HIT",
+          "PRICE_BUY_ALERT",
+          "TARGET_HIT"
+        ],
+        "hourly_digest": [
+          "PATTERN_DETECTED",
+          "HIGH_SCORE_STOCK"
+        ],
+        "morning_brief": "7:30 AM IST daily summary"
+      }
+    }
+  },
+  "alert_engine": {
+    "alert_types": {
+      "PRICE_BUY_ALERT": {
+        "trigger": "Live price <= alert_buy_price AND live_price >= entry_low",
+        "check_interval_seconds": 30,
+        "channels": [
+          "desktop",
+          "email",
+          "whatsapp"
+        ],
+        "message": "[TICKER] entered BUY ZONE at ₹[PRICE]. Entry: ₹[entry_low]–₹[entry_high]"
+      },
+      "PRICE_TARGET_ALERT": {
+        "trigger": "Live price >= target1 OR live price >= target2",
+        "channels": [
+          "desktop",
+          "email",
+          "whatsapp"
+        ],
+        "message": "[TICKER] reached TARGET [1/2] at ₹[PRICE]. Action: SELL [50/100]%"
+      },
+      "STOP_LOSS_ALERT": {
+        "trigger": "Live price <= stop_loss",
+        "channels": [
+          "desktop",
+          "email",
+          "whatsapp"
+        ],
+        "priority": "CRITICAL",
+        "message": "⚠️ STOP LOSS HIT: [TICKER] at ₹[PRICE]. EXIT 100% IMMEDIATELY."
+      },
+      "PATTERN_ALERT": {
+        "trigger": "Scanner detects pattern with score >= threshold",
+        "channels": [
+          "desktop",
+          "email"
+        ],
+        "message": "New [PATTERN] detected on [TICKER] — Score [X]/10"
+      },
+      "VIX_ALERT": {
+        "triggers": {
+          "vix_above_20": "Deploy caution mode",
+          "vix_above_25": "Stop new positions",
+          "vix_above_30": "EXIT ALL alert"
+        },
+        "channels": [
+          "desktop",
+          "email",
+          "whatsapp"
+        ]
+      },
+      "FII_ALERT": {
+        "trigger": "FII net sell > 3000 Cr OR FII net buy > 2000 Cr",
+        "channels": [
+          "desktop",
+          "email"
+        ],
+        "message": "FII [bought/sold] ₹[AMOUNT] Cr today — Market [BULLISH/BEARISH] signal"
+      },
+      "GOLDEN_CROSS_ALERT": {
+        "trigger": "Golden Cross detected on any watched stock",
+        "channels": [
+          "desktop",
+          "email"
+        ],
+        "message": "Golden Cross confirmed: [TICKER] — EMA50 crossed above EMA200"
+      }
+    },
+    "alert_creation_ui": {
+      "fields": [
+        "ticker",
+        "alert_type",
+        "trigger_price (if price-based)",
+        "condition (above/below)",
+        "notification_channels",
+        "notes",
+        "expiry_date"
+      ],
+      "templates": {
+        "T1_SELL_ALERT": "Auto-fills: price=target1, type=TARGET_HIT, channels=all",
+        "T2_SELL_ALERT": "Auto-fills: price=target2, type=TARGET_HIT, channels=all",
+        "BUY_ZONE_ALERT": "Auto-fills: price=entry_high, type=PRICE_BUY, channels=all",
+        "SL_ALERT": "Auto-fills: price=stop_loss, type=STOP_LOSS, channels=all"
+      }
+    }
+  },
+  "portfolio_optimizer": {
+    "features": [
+      "Kelly Criterion position sizing",
+      "Correlation matrix (avoid >0.8 correlated positions)",
+      "Sector allocation limits (max 40%)",
+      "Portfolio beta tracker (target 0.8-1.2)",
+      "Value at Risk (95% confidence, 1-day)"
+    ]
+  },
+  "market_holiday_calendar": {
+    "india_2025": [
+      "Jan 26",
+      "Mar 14",
+      "Apr 14",
+      "Apr 18",
+      "May 1",
+      "Aug 15",
+      "Oct 2",
+      "Oct 20",
+      "Nov 5",
+      "Dec 25"
+    ],
+    "us_2025": [
+      "Jan 1",
+      "Jan 20",
+      "Feb 17",
+      "Apr 18",
+      "May 26",
+      "Jun 19",
+      "Jul 4",
+      "Sep 1",
+      "Nov 27",
+      "Dec 25"
+    ],
+    "logic": "Skip scans + mark prices NA + disable market-hour alerts on holidays"
+  },
+  "settings_schema": {
+    "api_keys": {
+      "openai_api_key": {
+        "type": "password",
+        "required": false,
+        "description": "For AI narrative generation"
+      },
+      "alpha_vantage_key": {
+        "type": "password",
+        "required": false,
+        "description": "US stock real-time data"
+      },
+      "polygon_io_key": {
+        "type": "password",
+        "required": false,
+        "description": "US stock real-time data (better)"
+      },
+      "twilio_account_sid": {
+        "type": "password",
+        "required": false,
+        "description": "WhatsApp via Twilio"
+      },
+      "twilio_auth_token": {
+        "type": "password",
+        "required": false
+      },
+      "twilio_whatsapp_from": {
+        "type": "string",
+        "example": "+14155238886"
+      },
+      "sendgrid_api_key": {
+        "type": "password",
+        "required": false,
+        "description": "Alternative to Gmail SMTP"
+      }
+    },
+    "notification_settings": {
+      "email": {
+        "smtp_provider": {
+          "type": "dropdown",
+          "options": [
+            "Gmail",
+            "Outlook",
+            "Yahoo",
+            "Custom"
+          ]
+        },
+        "smtp_email": {
+          "type": "email"
+        },
+        "smtp_password": {
+          "type": "password",
+          "note": "Use App Password for Gmail"
+        },
+        "recipient_email": {
+          "type": "email",
+          "description": "Where to send alerts"
+        },
+        "email_alerts_enabled": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "whatsapp": {
+        "method": {
+          "type": "dropdown",
+          "options": [
+            "Twilio API",
+            "pywhatkit (free)",
+            "Disabled"
+          ]
+        },
+        "recipient_phone": {
+          "type": "string",
+          "example": "+919XXXXXXXXX"
+        },
+        "whatsapp_alerts_enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "desktop": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "sound_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "quiet_hours_start": {
+          "type": "time",
+          "default": "22:00"
+        },
+        "quiet_hours_end": {
+          "type": "time",
+          "default": "08:00"
+        }
+      }
+    },
+    "scan_preferences": {
+      "auto_scan_enabled": {
+        "type": "boolean",
+        "default": true
+      },
+      "scan_interval_minutes": {
+        "type": "integer",
+        "default": 15,
+        "options": [
+          5,
+          10,
+          15,
+          30,
+          60
+        ]
+      },
+      "default_universe": {
+        "type": "dropdown",
+        "default": "Nifty 200",
+        "options": [
+          "Nifty 50",
+          "Nifty 100",
+          "Nifty 200",
+          "Midcap 100",
+          "S&P 500",
+          "Nasdaq 100"
+        ]
+      },
+      "min_score_threshold": {
+        "type": "float",
+        "default": 7.0
+      },
+      "min_rr_threshold": {
+        "type": "float",
+        "default": 2.0
+      },
+      "default_risk_pct": {
+        "type": "float",
+        "default": 1.5,
+        "options": [
+          1.0,
+          1.5,
+          2.0
+        ]
+      },
+      "morning_report_time": {
+        "type": "time",
+        "default": "07:30"
+      },
+      "morning_report_enabled": {
+        "type": "boolean",
+        "default": true
+      }
+    },
+    "display": {
+      "theme": {
+        "type": "dropdown",
+        "default": "Dark Pro",
+        "options": [
+          "Dark Pro",
+          "Dark Blue",
+          "Dark Green",
+          "Light (not recommended)"
+        ]
+      },
+      "chart_candle_type": {
+        "type": "dropdown",
+        "default": "Candlestick",
+        "options": [
+          "Candlestick",
+          "Heikin Ashi",
+          "Line"
+        ]
+      },
+      "default_chart_period": {
+        "type": "dropdown",
+        "default": "6M",
+        "options": [
+          "1M",
+          "3M",
+          "6M",
+          "1Y"
+        ]
+      },
+      "language": {
+        "type": "dropdown",
+        "default": "English",
+        "options": [
+          "English",
+          "Hindi (UI labels)"
+        ]
+      },
+      "currency": {
+        "type": "dropdown",
+        "default": "INR ₹",
+        "options": [
+          "INR ₹",
+          "USD $"
+        ]
+      },
+      "number_format": {
+        "type": "dropdown",
+        "default": "Indian (1,00,000)",
+        "options": [
+          "Indian (1,00,000)",
+          "International (100,000)"
+        ]
+      }
+    }
+  },
+  "tech_stack_setup": {
+    "directory_structure": {
+      "root": "SwingEdgePro/",
+      "structure": {
+        "main.py": "Application entry point",
+        "app/": {
+          "auth.py": "Authentication module",
+          "dashboard.py": "Main dashboard UI",
+          "scanner.py": "Stock scanner engine",
+          "analysis.py": "Technical analysis module",
+          "alerts.py": "Alert engine",
+          "notifications.py": "Email + WhatsApp sender",
+          "database.py": "SQLite DB manager",
+          "data_fetcher.py": "Market data fetching",
+          "indicators.py": "All technical indicator calculations",
+          "pattern_detector.py": "Chart pattern detection",
+          "scoring.py": "Stock scoring algorithm",
+          "prediction.py": "AI prediction engine",
+          "news_fetcher.py": "News RSS aggregator",
+          "portfolio.py": "Portfolio tracker",
+          "settings.py": "Settings manager"
+        },
+        "ui/": {
+          "styles.py": "PyQt6 stylesheets",
+          "components/": "Reusable UI components (cards, charts, tables)",
+          "screens/": "Individual screen layouts"
+        },
+        "data/": {
+          "swingpro.db": "Main SQLite database",
+          "cache/": "OHLCV cache files",
+          "exports/": "User-exported CSVs and PDFs"
+        },
+        "assets/": {
+          "icons/": "App icons",
+          "sounds/": "Notification sounds",
+          "fonts/": "Inter/Roboto fonts",
+          "logo.png": "App logo"
+        },
+        "logs/": "Application logs",
+        "backups/": "Automatic DB backups",
+        "requirements.txt": "All Python dependencies"
+      }
+    },
+    "requirements_txt": [
+      "PyQt6>=6.5.0",
+      "pandas>=2.0.0",
+      "numpy>=1.24.0",
+      "yfinance>=0.2.30",
+      "pandas-ta>=0.3.14b",
+      "plotly>=5.15.0",
+      "mplfinance>=0.12.10b0",
+      "requests>=2.31.0",
+      "beautifulsoup4>=4.12.0",
+      "feedparser>=6.0.10",
+      "textblob>=0.17.1",
+      "nltk>=3.8.1",
+      "openai>=1.0.0",
+      "twilio>=8.5.0",
+      "pywhatkit>=5.4",
+      "plyer>=2.1.0",
+      "schedule>=1.2.0",
+      "cryptography>=41.0.0",
+      "PyJWT>=2.8.0",
+      "reportlab>=4.0.0",
+      "openpyxl>=3.1.0"
+    ],
+    "packaging": {
+      "tool": "PyInstaller",
+      "command": "pyinstaller --onefile --windowed --icon=assets/logo.ico main.py",
+      "output": "dist/SwingEdgePro.exe (Windows) or dist/SwingEdgePro.app (Mac)"
+    }
+  },
+  "error_handling": {
+    "api_failures": {
+      "yfinance_down": "Use cached prices + DELAYED badge",
+      "internet_down": "Offline mode with last-known data",
+      "openai_down": "Rule-based prediction only"
+    },
+    "data_quality": [
+      "Skip if price = 0",
+      "Mark as estimated if volume = 0",
+      "Reload on corporate action detected"
+    ],
+    "crash_recovery": "Auto-save every 5 min; restore from SQLite on next launch"
+  },
+  "relative_strength_engine": {
+    "formula": "RS_Ratio = Stock_20d_return / Nifty_20d_return",
+    "entry_rule": "Only buy if RS_Ratio > 1.0 (Mark Minervini SEPA rule — outperforming Nifty)",
+    "exit_rule": "Exit if RS_Ratio < 0.85 for 5+ consecutive days"
+  },
+  "gap_analysis": {
+    "gap_up_1_3pct": "BUY if first 15-min candle bullish + holds above gap",
+    "gap_up_above_5pct": "WAIT for pullback to gap level then BUY",
+    "gap_down_1_3pct": "Hold existing longs if above SL; no new buys",
+    "gap_down_above_5pct": "EXIT if gap takes price below SL; wait 1 hour before assessing bounce"
+  }
+}
